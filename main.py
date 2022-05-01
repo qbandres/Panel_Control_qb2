@@ -1,3 +1,4 @@
+import sys
 from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog
@@ -234,7 +235,7 @@ def PB_export():
     writer.save()
 
 
-
+#Funcion Avanve Steel
 def pte_import_master():
     global mast
     #LECTURA DE LA INFORMACION
@@ -341,10 +342,14 @@ def pte_export_tekla():
 
     Widget(my_frame2,"gray77", 1, 1, 150, 165).letra('Exportado')
 
+#Función Systemas
+def sys_import_piping():
+    import_file_path = filedialog.askopenfilename()
+    pip_sys = pd.read_excel(import_file_path,sheet_name='DATA')
+    print(pip_sys)
+    print(pip_sys.columns)
 
-def imprimir2():
-    print("Hello Wolrd pestaña 2")
-
+    Widget(my_frame2,"gray77", 15, 1, 250, 5).letra('Importado')
 
 root = Tk()
 root.title('Control Panel')
@@ -378,7 +383,7 @@ Widget(my_frame2,"gray56", 15, 1, 250, 125).boton('Exportar Report pte',pte_expo
 Widget(my_frame2,"gray56", 15, 1, 250, 165).boton('Exportar avance',pte_export_tekla)
 
 
-
-Widget(my_frame3,"gray56", 15, 1, 140, 85).boton('Imprimir',imprimir2)
+#Frame3
+Widget(my_frame3,"gray56", 15, 1, 250, 5).boton('Importar Piping',sys_import_piping)
 
 root.mainloop()
