@@ -5,6 +5,10 @@ from tkinter import filedialog
 import numpy as np
 import pandas as pd
 from tkinter.filedialog import asksaveasfile
+import datetime as dt 
+from datetime import date, timedelta
+
+import pip
 
 class Widget:
     def __init__(self, fram, back, ancho, altura, pox, poy):
@@ -230,7 +234,7 @@ def PB_export():
     dfv.to_excel(writer, sheet_name='ST_Gan', index=True)
     df_base.to_excel(writer, sheet_name='ST_Base', index=True)
 
-    Widget(root,"gray77", 1, 1, 168, 178).letra('OK')
+    Widget(my_frame1,"gray77", 1, 1, 168, 178).letra('OK')
 
     writer.save()
 
@@ -343,13 +347,118 @@ def pte_export_tekla():
     Widget(my_frame2,"gray77", 1, 1, 150, 165).letra('Exportado')
 
 #Función Systemas
-def sys_import_piping():
-    import_file_path = filedialog.askopenfilename()
-    pip_sys = pd.read_excel(import_file_path,sheet_name='DATA')
-    print(pip_sys)
-    print(pip_sys.columns)
+def sist_import_piping():
 
-    Widget(my_frame2,"gray77", 15, 1, 250, 5).letra('Importado')
+    global pip_gen
+    import_file_path = filedialog.askopenfilename()
+    pip_sist = pd.read_excel(import_file_path,sheet_name='DATA')
+
+    pip_ug = pip_sist[pip_sist['ABV_BEL_RACK']=="UG"]
+    pip_ag = pip_sist[pip_sist['ABV_BEL_RACK']=="AG"]
+
+    pip_ug = pip_ug[['ABV_BEL_RACK','SUBSISTEMA','TAG','RATIO','FLUIDO','DIAMETRO','LONG','UG_MWR','UG_TRASL','UG_PREP','UG_SOLD','UG_INSP','UG_PUNCH']]
+    pip_ag = pip_ag[['ABV_BEL_RACK','SUBSISTEMA','TAG','RATIO','FLUIDO','DIAMETRO','LONG','AG_MWR','AG_TRASL','AG_FABR','AG_PREP','AG_SOLD','AG_INSP','AG_PUNCH']]
+
+    #Calculamos el avance equivalente
+    pip_ag['ml_eq'] = pip_ag.AG_MWR*0.05+pip_ag.AG_TRASL*0.05+pip_ag.AG_FABR*0.1+pip_ag.AG_PREP*0.1+pip_ag.AG_SOLD*0.55+pip_ag.AG_INSP*0.1+pip_ag.AG_PUNCH*0.05
+    pip_ug['ml_eq'] = pip_ug.UG_MWR*0.05+pip_ug.UG_TRASL*0.05+pip_ug.UG_PREP*0.23+pip_ug.UG_SOLD*0.47+pip_ug.UG_INSP*0.15+pip_ug.UG_PUNCH*0.05
+
+    pip_ag['HH_AVAN'] = pip_ag.ml_eq*pip_ag.RATIO
+    pip_ug['HH_AVAN'] = pip_ug.ml_eq*pip_ug.RATIO
+
+    
+    pip_ag['HH_TOTAL'] = pip_ag.LONG*pip_ag.RATIO
+    pip_ug['HH_TOTAL'] = pip_ug.LONG*pip_ug.RATIO
+
+
+
+    pip_ug = pip_ug[['SUBSISTEMA','TAG','RATIO','FLUIDO','DIAMETRO','LONG','ml_eq','HH_AVAN','HH_TOTAL','ABV_BEL_RACK']]
+    pip_ag = pip_ag[['SUBSISTEMA','TAG','RATIO','FLUIDO','DIAMETRO','LONG','ml_eq','HH_AVAN','HH_TOTAL','ABV_BEL_RACK']]
+
+    pip_gen = pd.concat([pip_ug,pip_ag],axis=0)
+    pip_gen = pip_gen.fillna(0)
+    pip_gen['Disciplina'] = "Piping"
+    pip_gen['HH_SALDO'] = pip_gen.HH_TOTAL - pip_gen.HH_AVAN
+
+    print(pip_gen)
+    print(pip_gen.columns)
+
+    print(pip_gen.HH_TOTAL.sum())
+    print(pip_ag.LONG.sum())
+    print(pip_ug.LONG.sum())
+    print(pip_gen.LONG.sum())
+
+
+    Widget(my_frame3,"gray77", 15, 1, 150, 5).letra('Importado')
+def sist_import_mec():
+    global mec_sist
+    import_file_path = filedialog.askopenfilename()
+    mec_sist = pd.read_excel(import_file_path,sheet_name='DATA')
+    print(mec_sist)
+    print(mec_sist.columns)
+    print(mec_sist.HH_TOTAL.sum())
+
+    Widget(my_frame3,"gray77", 15, 1, 150, 45).letra('Importado')
+def sist_export_report():
+    sist_tot  = pd.concat([pip_gen[['Disciplina','TAG','SUBSISTEMA','HH_TOTAL','HH_SALDO']],mec_sist[['Disciplina','TAG','SUBSISTEMA','HH_TOTAL','HH_SALDO']]],axis=0)
+
+
+    sist_tot_g = sist_tot.groupby(['SUBSISTEMA','Disciplina']).sum()
+    sist_tot_g['Avance'] = 1-sist_tot_g.HH_SALDO/sist_tot_g.HH_TOTAL
+
+    sist_tot_gt = sist_tot.groupby(['SUBSISTEMA']).sum()
+    sist_tot_g =  sist_tot_g.reset_index(level=['SUBSISTEMA','Disciplina'])
+    sist_tot_gt['Avance'] = 1-sist_tot_gt.HH_SALDO/sist_tot_gt.HH_TOTAL
+    sist_tot_gt =  sist_tot_gt.reset_index(level=['SUBSISTEMA'])
+    
+    print(sist_tot_g)
+    print(sist_tot_gt)
+    
+
+    #Extraer los nombres de sistemas a los avances de disciplinas
+    sist_tot_gs = sist_tot_g.merge(list_sist[['SUBSISTEMA', 'DESCRIP','LINEA','1ER_COBRE','Actual','FIN','Saldo_dias']], on='SUBSISTEMA',
+                    how='left')
+
+    #Extraer el listado de sistermas a los avances agrupado
+    sist_tot_gts = sist_tot_gt.merge(list_sist[['SUBSISTEMA', 'DESCRIP','LINEA','1ER_COBRE','Actual','FIN','Saldo_dias']], on='SUBSISTEMA',
+                    how='left')
+
+
+    #Extraes los avances al listado de sistemas
+    list_sist_g = list_sist.merge(sist_tot_g[['SUBSISTEMA','Disciplina','HH_TOTAL','HH_SALDO','Avance']], on='SUBSISTEMA',
+                    how='left')
+    list_sist_g['HH_Sem'] = list_sist_g.HH_SALDO/(list_sist_g['Saldo_dias'])*7
+    
+    #Extraes los avances al listado de sistemas
+    list_sist_gt = list_sist.merge(sist_tot_gt[['SUBSISTEMA','HH_TOTAL','HH_SALDO','Avance']], on='SUBSISTEMA',
+                    how='left')
+    list_sist_gt['HH_Sem'] = list_sist_gt.HH_SALDO/(list_sist_gt['Saldo_dias'])*7
+
+
+    export_file = filedialog.askdirectory()  # Buscamos el directorio para guardar
+    writer = pd.ExcelWriter(export_file + '/' + 'Sistemas_QB2.xlsx')  # Creamos una excel y le indicamos la ruta
+
+    # Exportar Steel
+    sist_tot_gs.to_excel(writer, sheet_name='Det_Disc_sist', index=False)
+    sist_tot_gts.to_excel(writer, sheet_name='Agru_Disc_Sist', index=True)
+    list_sist_g.to_excel(writer, sheet_name='Det_Sist_Disc', index=False)
+    list_sist_gt.to_excel(writer, sheet_name='Agru_Sist_Disc', index=False)
+
+    Widget(my_frame3,"gray77", 1, 1, 150, 125).letra('OK')
+
+    writer.save()
+
+def sist_import_list():
+    global list_sist
+    import_file_path = filedialog.askopenfilename()
+    list_sist = pd.read_excel(import_file_path,sheet_name='data')
+
+    list_sist["FIN"] = pd.to_datetime(list_sist.FIN).dt.date 
+
+    print(list_sist)
+    Widget(my_frame3,"gray77", 15, 1, 150, 85).letra('Importado')
+
+
 
 root = Tk()
 root.title('Control Panel')
@@ -384,6 +493,10 @@ Widget(my_frame2,"gray56", 15, 1, 250, 165).boton('Exportar avance',pte_export_t
 
 
 #Frame3
-Widget(my_frame3,"gray56", 15, 1, 250, 5).boton('Importar Piping',sys_import_piping)
+Widget(my_frame3,"gray56", 15, 1, 250, 5).boton('Importar Piping',sist_import_piping)
+Widget(my_frame3,"gray56", 15, 1, 250, 45).boton('Importar Mec',sist_import_mec)
+Widget(my_frame3,"gray56", 15, 1, 250, 125).boton('Export Report',sist_export_report)
+Widget(my_frame3,"gray56", 15, 1, 250, 85).boton('Import Listado Sist',sist_import_list)
+# Widget(my_frame3,"gray56", 15, 1, 250, 45).boton('Export PBI',sist_export_pbi)
 
 root.mainloop()
