@@ -7,17 +7,22 @@ df = pd.read_excel('temp.xlsx')
 
 print(df.iloc[:,0])
 
-def distri(df):
-    n=0
+class distribucion:
+    def __init__(self,df):
+        self.df=df
+    def distri(self):
+        n=0
 
-    for i in df.iloc[:,0]:
-        
-        ft = [df.iloc[n,16] + timedelta(days=d) for d in range((df.iloc[n,11] - df.iloc[n,16]).days + 1)]  # CREAMOS LA LISTA DE FECHAS
-        dft = pd.DataFrame({'Fecha': ft})
-        n=n+1
-        dft['HH_dia'] = df.HH_SALDO/len(dft)
-        
-        print(dft)
+        for i in self.df.iloc[:,0]:
+            
+            ft = [self.df.iloc[n,16] + timedelta(days=d) for d in range((self.df.iloc[n,11] - self.df.iloc[n,16]).days + 1)]  # CREAMOS LA LISTA DE FECHAS
+            dft = pd.DataFrame({'Fecha': ft})
+            n=n+1
+
+ 
+            dft['HH_dia'] = self.df.iloc[].HH_SALDO/len(dft)
+
+            print(dft)
 
 
 
