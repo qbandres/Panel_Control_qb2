@@ -622,6 +622,8 @@ def asistencia():
 
     asist_direct_2 = pd.concat([asist_direct,temp_dia,temp_noche,asist_direct_1],axis=1)
 
+    print(asist_direct_2)
+
     asist_direct_3 = asist_direct_2.copy()
 
 
@@ -637,7 +639,7 @@ def export_asis():
     writer = pd.ExcelWriter(export_file + '/' + 'Asistencia.xlsx')  # Creamos una excel y le indicamos la ruta
 
     # Exportar Steel
-    asist_direct_2.to_excel(writer, sheet_name='Det_Disc_sist', index=False)
+    asist_direct_2.to_excel(writer, sheet_name='Det_Disc_sist', index=True)
     asist_direct_3.to_excel(writer, sheet_name='Agru_Disc_Sist', index=True)
 
 
