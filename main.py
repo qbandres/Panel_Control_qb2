@@ -49,8 +49,8 @@ class Semana:                                   #CREAR DATA FRAME CON LA SEMANA
         return self.df
 
 #Funiones de Power bi - Steel
-def PB_import():
-    global dfv, df_base
+def PB_import_master():
+    global dfv, df_base,dfv_g
 
     ########CODIGO STEEL###############
 
@@ -62,7 +62,7 @@ def PB_import():
 
     d_pon = {'TR': 0.05, 'PA': 0.1, 'MO': 0.45, 'NI': 0.2, 'PI': 0.1, 'PU': 0.1}  # PONDERACIONES STEEL
     df_master = df_master[['IDTekla', 'ESP', 'Barcode', 'PesoTotal(Kg)', 'Ratio', 'Traslado', 'Prearmado', 'Montaje',
-                           'Nivelacion,soldadura&Torque', 'Punchlist', 'FASE', 'Clasificación','linea']]
+                           'Nivelacion,soldadura&Torque', 'Punchlist', 'FASE', 'Clasificación','linea','Descripción']]
 
     df_master.rename(columns={'Traslado': 'DTR', 'Prearmado': 'DPA',
                               'Montaje': 'DMO', 'Nivelacion,soldadura&Torque': 'DNI',
@@ -78,8 +78,11 @@ def PB_import():
     # df = df[df["FASE"] != "SOPORTES COMITIVA PIPERACK 3 CON SALAS ELECTRICAS"]
     df_master = df_master[df_master["FASE"] != "Torre de transferencia"]
 
-    
-
+    df_master["DTR"] = pd.to_datetime(df_master.DTR).dt.date
+    df_master["DPA"] = pd.to_datetime(df_master.DPA).dt.date
+    df_master["DMO"] = pd.to_datetime(df_master.DMO).dt.date
+    df_master["DNI"] = pd.to_datetime(df_master.DNI).dt.date
+    df_master["DPU"] = pd.to_datetime(df_master.DPU).dt.date
 
     # # CALCULO DE PESOS TOTALES DE SEGUN PONDERACION
 
@@ -99,8 +102,6 @@ def PB_import():
     df_master['TOTAL_EPU'] = df_master.WEIGHT * d_pon['PU'] * df_master.Ratio / 1000
 
     
-
-
     # CALCULO DE PESO SEGUN AVANCE
     df_master['WTR'] = np.where(df_master['DTR'].isnull(), 0, df_master.WEIGHT * d_pon['TR'])
     df_master['WPA'] = np.where(df_master['DPA'].isnull(), 0, df_master.WEIGHT * d_pon['PA'])
@@ -115,19 +116,15 @@ def PB_import():
     df_master['BWNI'] = np.where(df_master['DNI'].isnull(), 0, df_master.WEIGHT)
     df_master['BWPU'] = np.where(df_master['DPU'].isnull(), 0, df_master.WEIGHT)
 
-
-
-    df_base = df_master[['ID', 'ESP', 'WEIGHT', 'Ratio', 'FASE', 'Clasificación','linea', 'BWTR', 'BWPA', 'BWMO', 'BWNI', 'BWPU']]
+    df_base = df_master[['ID', 'ESP', 'WEIGHT', 'Ratio', 'FASE', 'Clasificación','linea','Descripción', 'BWTR', 'BWPA', 'BWMO', 'BWNI', 'BWPU']]
 
     df_base = df_base.fillna(0)
-
 
     df_base['WEIGHT'] = df_base['WEIGHT']* 0.001
     df_base.loc['BWPA'] = df_base['BWPA'] * 0.001
     df_base.loc['BWMO'] = df_base['BWMO'] * 0.001
     df_base.loc['BWNI'] = df_base['BWNI'] * 0.001
     df_base.loc['BWPU'] = df_base['BWPU'] * 0.001
-
 
 
     df_base.dropna(inplace=True)
@@ -150,27 +147,27 @@ def PB_import():
 
     #########################SEPARAMOS LOS PESOS POR AVANCE DE CADA ETAPA
 
-    df_dtr = df_master[["ESP", "ID", 'Barcode', "WEIGHT", "Ratio", "DTR", "WTR", "ETR", 'FASE', 'Clasificación','linea']]
+    df_dtr = df_master[["ESP", "ID", 'Barcode', "WEIGHT", "Ratio", "DTR", "WTR", "ETR", 'FASE', 'Clasificación','linea','Descripción']]
     df_dtr = df_dtr.dropna(subset=['DTR'])  # Elimina llas filas vacias de DTR
     df_dtr["Etapa"] = "1-Traslado"
     df_dtr = df_dtr.rename(columns={'WTR': 'WPOND', "DTR": 'Fecha', 'ETR': 'HGan'})
 
-    df_dpa = df_master[["ESP", "ID", 'Barcode', "WEIGHT", "Ratio", "DPA", "WPA", "EPA", 'FASE', 'Clasificación','linea']]
+    df_dpa = df_master[["ESP", "ID", 'Barcode', "WEIGHT", "Ratio", "DPA", "WPA", "EPA", 'FASE', 'Clasificación','linea','Descripción']]
     df_dpa = df_dpa.dropna(subset=['DPA'])
     df_dpa["Etapa"] = "2-Ensamble"
     df_dpa = df_dpa.rename(columns={'WPA': 'WPOND', "DPA": 'Fecha', 'EPA': 'HGan'})
 
-    df_dmo = df_master[["ESP", "ID", 'Barcode', "WEIGHT", "Ratio", "DMO", "WMO", "EMO", 'FASE', 'Clasificación','linea']]
+    df_dmo = df_master[["ESP", "ID", 'Barcode', "WEIGHT", "Ratio", "DMO", "WMO", "EMO", 'FASE', 'Clasificación','linea','Descripción']]
     df_dmo = df_dmo.dropna(subset=['DMO'])
     df_dmo["Etapa"] = "3-Montaje"
     df_dmo = df_dmo.rename(columns={'WMO': 'WPOND', "DMO": 'Fecha', 'EMO': 'HGan'})
 
-    df_dni = df_master[["ESP", "ID", 'Barcode', "WEIGHT", "Ratio", "DNI", "WNI", "ENI", 'FASE', 'Clasificación','linea']]
+    df_dni = df_master[["ESP", "ID", 'Barcode', "WEIGHT", "Ratio", "DNI", "WNI", "ENI", 'FASE', 'Clasificación','linea','Descripción']]
     df_dni = df_dni.dropna(subset=['DNI'])
     df_dni["Etapa"] = "4-Alineamiento"
     df_dni = df_dni.rename(columns={'WNI': 'WPOND', "DNI": 'Fecha', 'ENI': 'HGan'})
 
-    df_dpu = df_master[["ESP", "ID", 'Barcode', "WEIGHT", "Ratio", "DPU", "WPU", "EPU", 'FASE', 'Clasificación','linea']]
+    df_dpu = df_master[["ESP", "ID", 'Barcode', "WEIGHT", "Ratio", "DPU", "WPU", "EPU", 'FASE', 'Clasificación','linea','Descripción']]
     df_dpu = df_dpu.dropna(subset=['DPU'])
     df_dpu["Etapa"] = "6-Punch_List"
     df_dpu = df_dpu.rename(columns={'WPU': 'WPOND', "DPU": 'Fecha', 'EPU': 'HGan'})
@@ -186,15 +183,16 @@ def PB_import():
     dfv['WBRUTO'] = np.where(dfv.Etapa != '3-Montaje', 0, dfv.WEIGHT)
 
     np_array = dfv.to_numpy()
+
     dfv = pd.DataFrame(data=np_array,
                        columns=['ESP', 'ID', 'Barcode', 'WEIGHT', 'Ratio', 'FECHA', 'WPOND', 'HHGan', 'FASE',
-                                'Clasificación','linea', 'Etapa',
+                                'Clasificación','linea','Descripción', 'Etapa',
                                 'WBRUTO'])
+
     dfv["FECHA"] = pd.to_datetime(dfv.FECHA).dt.date
 
-    
-
     dfv = Semana(dfv).split()  # Insertamos la Semana con class
+    
     print(dfv)
     dfv.to_excel('mmm.xlsx')
 
@@ -221,15 +219,49 @@ def PB_import():
     dfv.rename(columns={'FASE': 'ZONA'},
                        inplace=True)
 
+    dfv_g = dfv.groupby(['ESP']).sum()
+
     Widget(root,"gray77", 1, 1, 140, 38).letra('STEEL-M')
+def PB_import_otec():
+    global df_otec,dg_otec
+
+    import_file_path = filedialog.askopenfilename()
+    df_otec= pd.read_excel(import_file_path,sheet_name='Estructuras',skiprows=6)
+
+    df_otec = df_otec.iloc[:38505]    #Filtramos solo las columnas necesarias
+
+    df_otec=df_otec[['ESP','Descripción','Peso Total (Kg)','Traslado.1','Pre-Armado.1','Montaje.1', 'Nivelación, Soldadura & Torque.1',
+            'Punch List','total hh','traslado hh','prearm hh','montaje hh','niv, sold torq hh','punch list hh']]
+
+    df_otec = df_otec[df_otec["ESP"] != "03201.H028"]
+    df_otec = df_otec[df_otec["ESP"] != "03201.H029"]
+    df_otec = df_otec[df_otec["ESP"] != "03201.H006"]
+    df_otec = df_otec[df_otec["ESP"] != 1]
+    df_otec['ESP'] =df_otec['ESP'].str.strip()
+
+
+    dg_otec = df_otec.groupby('ESP').sum()
+
+    df_otec = df_otec.fillna(0)
+
+    print(df_otec)
+    print(df_otec.columns)
+
+    Widget(root,"gray77", 1, 1, 140, 118).letra('STEEL-OTEC')
 def PB_export():
 
     export_file = filedialog.askdirectory()  # Buscamos el directorio para guardar
     writer = pd.ExcelWriter(export_file + '/' + 'QB2_STEEL.xlsx')  # Creamos una excel y le indicamos la ruta
 
+    esp_comp = pd.concat([dg_otec,dfv_g],axis=1)
+
+
+
     # Exportar Steel
     dfv.to_excel(writer, sheet_name='ST_Gan', index=True)
     df_base.to_excel(writer, sheet_name='ST_Base', index=True)
+    df_otec.to_excel(writer, sheet_name='ST_Otec', index=True)
+    esp_comp.to_excel(writer, sheet_name='Comparacion_ESP', index=True)
 
     Widget(my_frame1,"gray77", 1, 1, 168, 178).letra('OK')
 
@@ -343,44 +375,48 @@ def pte_export_tekla():
 
     Widget(my_frame2,"gray77", 1, 1, 150, 165).letra('Exportado')
 
-
-
 #Función Systemas
 def sist_import_piping():
 
-    global pip_sist
+    global pip_sist_gen
     import_file_path = filedialog.askopenfilename()
     pip_sist_1 = pd.read_excel(import_file_path,sheet_name='Cub General ',skiprows=10)
+    pip_sist_2 = pd.read_excel(import_file_path,sheet_name='Cub Linea Menor',skiprows=9)
 
-    pip_sist = pip_sist_1[['ISOMETRICO','UG/AG','Diametro','Metros cañerias fore cast 11','SUB-SISTEMA',
+    pip_sist_gen = pip_sist_1[['ISOMETRICO','UG/AG/OR','Diametro','Metros cañerias fore cast 11','SUB-SISTEMA',
                         'AVANCE FINAL','HH\nAVANCE','HH TOTAL']]
 
-    print(pip_sist)
-    print(pip_sist.columns)
-
-    pip_sist.rename(columns={'SUB-SISTEMA': 'SUBSISTEMA','HH TOTAL': 'HH_TOTAL','Metros cañerias fore cast 11': 'LONG','Diametro':'DIAMETRO','AVANCE FINAL':'m_equi',
+    pip_sist_men = pip_sist_2[['ISOMETRICOS','Diametro','Metros cañerias','SUB \nSISTEMA',
+                        'AVANCE TOTAL\nAG','HH\nAVANCE','HH TOTAL']]
+    
+    print(pip_sist_men)
+    print(pip_sist_men.columns)
+    
+    pip_sist_gen.rename(columns={'SUB-SISTEMA': 'SUBSISTEMA','HH TOTAL': 'HH_TOTAL','Metros cañerias fore cast 11': 'LONG','Diametro':'DIAMETRO','AVANCE FINAL':'m_equi',
                                 'HH\nAVANCE':'HH_AVANCE','ISOMETRICO':'TAG'},
                        inplace=True)
 
-    pip_sist['HH_SALDO'] = pip_sist['HH_TOTAL'].subtract(pip_sist["HH_AVANCE"])
+    pip_sist_gen['HH_SALDO'] = pip_sist_gen['HH_TOTAL'].subtract(pip_sist_gen["HH_AVANCE"])
 
-    print(pip_sist.columns)
+    print(pip_sist_gen.columns)
 
-    pip_sist = pip_sist.fillna(0)
-    pip_sist['Disciplina'] = "Piping"
+    pip_sist_gen = pip_sist_gen.fillna(0)
+    pip_sist_gen['Disciplina'] = "Piping"
 
-    pip_sist['HH_TOTAL'] = pd.to_numeric(pip_sist['HH_TOTAL'], errors='coerce').mean()
-    pip_sist['HH_SALDO'] = pd.to_numeric(pip_sist['HH_SALDO'], errors='coerce').mean()
+    pip_sist_gen['HH_TOTAL'] = pd.to_numeric(pip_sist_gen['HH_TOTAL'], errors='coerce').mean()
+    pip_sist_gen['HH_SALDO'] = pd.to_numeric(pip_sist_gen['HH_SALDO'], errors='coerce').mean()
 
-    print(pip_sist)
-    print(pip_sist.columns)
-    print(pip_sist[['Disciplina','TAG','SUBSISTEMA','HH_TOTAL','HH_SALDO']])
-
-
+    print(pip_sist_gen)
+    print(pip_sist_gen.columns)
+    print(pip_sist_gen[['Disciplina','TAG','SUBSISTEMA','HH_TOTAL','HH_SALDO']])
 
 
-    # pip_ug = pip_sist[pip_sist['ABV_BEL_RACK']=="UG"]
-    # pip_ag = pip_sist[pip_sist['ABV_BEL_RACK']=="AG"]
+
+
+
+
+    # pip_ug = pip_sist_gen[pip_sist_gen['ABV_BEL_RACK']=="UG"]
+    # pip_ag = pip_sist_gen[pip_sist_gen['ABV_BEL_RACK']=="AG"]
 
     # pip_ug = pip_ug[['ABV_BEL_RACK','SUBSISTEMA','TAG','RATIO','FLUIDO','DIAMETRO','LONG','UG_MWR','UG_TRASL','UG_PREP','UG_SOLD','UG_INSP','UG_PUNCH']]
     # pip_ag = pip_ag[['ABV_BEL_RACK','SUBSISTEMA','TAG','RATIO','FLUIDO','DIAMETRO','LONG','AG_MWR','AG_TRASL','AG_FABR','AG_PREP','AG_SOLD','AG_INSP','AG_PUNCH']]
@@ -470,11 +506,11 @@ def sist_import_list():
 
     Widget(my_frame3,"gray77", 15, 1, 150, 110).letra('Importado')
 def sist_export_report():
-    print(pip_sist[['Disciplina','TAG','SUBSISTEMA','HH_TOTAL','HH_SALDO']])
+    print(pip_sist_gen[['Disciplina','TAG','SUBSISTEMA','HH_TOTAL','HH_SALDO']])
     print(mec_sist[['Disciplina','TAG','SUBSISTEMA','HH_TOTAL','HH_SALDO']])
     print(elect_sist[['Disciplina','TAG','SUBSISTEMA','HH_TOTAL','HH_SALDO']])
 
-    sist_tot  = pd.concat([pip_sist[['Disciplina','TAG','SUBSISTEMA','HH_TOTAL','HH_SALDO']],mec_sist[['Disciplina','TAG','SUBSISTEMA','HH_TOTAL','HH_SALDO']],
+    sist_tot  = pd.concat([pip_sist_gen[['Disciplina','TAG','SUBSISTEMA','HH_TOTAL','HH_SALDO']],mec_sist[['Disciplina','TAG','SUBSISTEMA','HH_TOTAL','HH_SALDO']],
                         elect_sist[['Disciplina','TAG','SUBSISTEMA','HH_TOTAL','HH_SALDO']]],axis=0)
 
 
@@ -632,8 +668,6 @@ def asistencia():
 
 
     Widget(my_frame4,"gray77", 1, 1, 150, 5).letra('OK')
-
-
 def export_asis():
     export_file = filedialog.askdirectory()  # Buscamos el directorio para guardar
     writer = pd.ExcelWriter(export_file + '/' + 'Asistencia.xlsx')  # Creamos una excel y le indicamos la ruta
@@ -670,8 +704,9 @@ my_notebook.add(my_frame3,text="System")
 my_notebook.add(my_frame4,text="Asitencia")
 
 #Frame 1
-Widget(my_frame1,"gray56", 15, 6, 250, 5).boton('Importar Master',PB_import)
-Widget(my_frame1,"gray56", 15, 6, 250, 105).boton('Exportar PBI',PB_export)
+Widget(my_frame1,"gray56", 15, 2, 250, 5).boton('Importar Master',PB_import_master)
+Widget(my_frame1,"gray56", 15, 2, 250, 45).boton('Importar OTEC',PB_import_otec)
+Widget(my_frame1,"gray56", 15, 2, 250, 85).boton('Exportar PBI',PB_export)
 
 
 #Frame 2
