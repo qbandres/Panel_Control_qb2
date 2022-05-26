@@ -1,29 +1,24 @@
 import pandas as pd
-from datetime import date, timedelta
-import datetime as dt 
+import numpy as np
 
+df_1 = pd.DataFrame({"id": [1,2,3,4,5],
+                    "fruta": ["manzana", "pera", "platano", "naranja", "aguacate"],
+                    "precio": [0.20, 0.45, 0.15, 0.12, 0.62]})
+print(df_1)
 
-df = pd.read_excel('temp.xlsx')
+df_2 = pd.DataFrame({"id":[5,4,3,2,1],
+                     "stock": [10, 20, 25, 12, 40]})
 
-print(df.iloc[:,0])
+print(df_2)
 
-class distribucion:
-    def __init__(self,df):
-        self.df=df
-    def distri(self):
-        n=0
+df_3 = pd.DataFrame({"id":[4,2,5,1,3],
+                     "ventas_totales":[3, 5, 2, 3, 6],
+                     "ingresos_ventas": [120, 110, 64,44, 147]})
 
-        for i in self.df.iloc[:,0]:
-            
-            ft = [self.df.iloc[n,16] + timedelta(days=d) for d in range((self.df.iloc[n,11] - self.df.iloc[n,16]).days + 1)]  # CREAMOS LA LISTA DE FECHAS
-            dft = pd.DataFrame({'Fecha': ft})
-            n=n+1
+print(df_3)
 
- 
-            dft['HH_dia'] = self.df.iloc[].HH_SALDO/len(dft)
+df_1.merge(df_2, on="id", how="left")
 
-            print(dft)
-
-
+print(df_1)
 
 

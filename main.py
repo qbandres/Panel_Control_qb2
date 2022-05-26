@@ -378,8 +378,6 @@ def pte_export_tekla():
 
 #Función Systemas
 def sist_import_piping():
-
-
     global pip_tot, pip_tot_res,pip_conc
 
     import_file_path = filedialog.askopenfilename()
@@ -536,11 +534,16 @@ def sist_import_piping():
 
     #AGRUPAMIENTO FINAL
     pip_tot = pd.concat([pip_sist_gen,pip_sist_men,pip_sist_valv,pip_sist_soport,pip_aisl],axis=0)
+
+    print(pip_tot)
+
     pip_tot['disc'] = 'Piping'
     pip_tot_res = pip_tot.groupby(['QUIEBRE_OT']).sum()
 
-    pip_conc = pip_tot[['QUIEBRE_OT', 'SUBSISTEMA','Cant_Tot', 'Cant_Avan', 'Cant_Sal','Und', 'HH_Tot', 'HH_Avan', 'HH_Saldo',
+    pip_conc = pip_tot[['QUIEBRE_OT', 'SUBSISTEMA','TAG','Cant_Tot', 'Cant_Avan', 'Cant_Sal','Und', 'HH_Tot', 'HH_Avan', 'HH_Saldo',
        'OTEC','disc']]
+
+    pip_conc = pip_conc[pip_conc['SUBSISTEMA'] != 0 ]
 
 
     Widget(my_frame3,"gray77", 15, 1, 150, 5).letra('Importado')
@@ -551,10 +554,10 @@ def sist_import_mec():
 
 
     mec_sist = mec_sist[['TAG','SUBSIST','UND','HH UND','HH SALDO','Disciplina']]
-    mec_sist.rename(columns={'SUBSIST': 'SUBSISTEMA','HH UND': 'HH_Tot','HH SALDO': 'HH_Saldo'},
+    mec_sist.rename(columns={'SUBSIST': 'SUBSISTEMA','HH UND': 'HH_Tot','HH SALDO': 'HH_Saldo','UND':'Und'},
                        inplace=True)
 
-    mec_sist = mec_sist.dropna(subset=['UND'])
+    mec_sist = mec_sist.dropna(subset=['Und'])
 
 
     def conditions(x):
@@ -572,7 +575,7 @@ def sist_import_mec():
             return "NA"
 
     func = np.vectorize(conditions)
-    energy_class = func(mec_sist["UND"])
+    energy_class = func(mec_sist["Und"])
 
     mec_sist.insert(0, 'QUIEBRE_OT',energy_class)
 
@@ -588,14 +591,17 @@ def sist_import_mec():
     mec_sist['OTEC'] = 'Base_Datos'
     mec_sist['disc'] = mec_sist.Disciplina
     del mec_sist['Disciplina']
-    del mec_sist['UND']
-
-    mec_conc = mec_sist
-
-    del mec_conc['TAG']
-    
 
     print(mec_sist)
+    print(mec_sist.columns)
+
+
+    mec_conc = mec_sist[['QUIEBRE_OT','SUBSISTEMA','TAG','Cant_Tot','Cant_Avan','Cant_Sal','Und','HH_Tot','HH_Avan','HH_Saldo','OTEC','disc']]
+
+    mec_conc['SUBSISTEMA'] = np.where(mec_conc['SUBSISTEMA'] == 0, 'POR DEFINIR OTEC',mec_conc['SUBSISTEMA'])
+    
+
+    print(mec_conc)
 
 
 
@@ -630,8 +636,10 @@ def sist_import_elect():
     elect_sist_cab['disc'] = 'ELECT'
    
 
-    elec_con_cab = elect_sist_cab[['QUIEBRE_OT','SUBSISTEMA','Cant_Tot','Cant_Avan','Cant_Sal','Und','HH_Tot','HH_Avan','HH_Saldo','OTEC','disc']]
-    
+    elec_con_cab = elect_sist_cab[['QUIEBRE_OT','SUBSISTEMA','TAG','Cant_Tot','Cant_Avan','Cant_Sal','Und','HH_Tot','HH_Avan','HH_Saldo','OTEC','disc']]
+    elec_con_cab = elec_con_cab[elec_con_cab['SUBSISTEMA'] != 'Eliminado' ]
+
+
     print(elect_sist_cab['HH_Tot'].sum())
     print(elect_sist_cab['HH_Avan'].sum())
     print(elect_sist_cab['HH_Saldo'].sum())
@@ -652,7 +660,7 @@ def sist_import_elect():
     elect_sist_alu['disc'] = 'ELECT'
     elect_sist_alu['SUBSISTEMA'] = '0310-NZC-001'
 
-    elec_con_al = elect_sist_alu[['QUIEBRE_OT','SUBSISTEMA','Cant_Tot','Cant_Avan','Cant_Sal','Und','HH_Tot','HH_Avan','HH_Saldo','OTEC','disc']]
+    elec_con_al = elect_sist_alu[['QUIEBRE_OT','SUBSISTEMA','TAG','Cant_Tot','Cant_Avan','Cant_Sal','Und','HH_Tot','HH_Avan','HH_Saldo','OTEC','disc']]
 
     
 
@@ -675,7 +683,7 @@ def sist_import_elect():
     elect_sist_malla['disc'] = 'ELECT'
     elect_sist_malla['SUBSISTEMA'] = '0310-NZC-001'
 
-    elec_con_mall = elect_sist_malla[['QUIEBRE_OT','SUBSISTEMA','Cant_Tot','Cant_Avan','Cant_Sal','Und','HH_Tot','HH_Avan','HH_Saldo','OTEC','disc']]
+    elec_con_mall = elect_sist_malla[['QUIEBRE_OT','TAG','SUBSISTEMA','Cant_Tot','Cant_Avan','Cant_Sal','Und','HH_Tot','HH_Avan','HH_Saldo','OTEC','disc']]
 
     #EPC
 
@@ -692,12 +700,12 @@ def sist_import_elect():
     elect_sist_epc['disc'] = 'ELECT'
     elect_sist_epc['SUBSISTEMA'] = '0310-NZC-001'
 
-    elec_con_epc = elect_sist_epc[['QUIEBRE_OT','SUBSISTEMA','Cant_Tot','Cant_Avan','Cant_Sal','Und','HH_Tot','HH_Avan','HH_Saldo','OTEC','disc']]
+    elec_con_epc = elect_sist_epc[['QUIEBRE_OT','SUBSISTEMA','TAG','Cant_Tot','Cant_Avan','Cant_Sal','Und','HH_Tot','HH_Avan','HH_Saldo','OTEC','disc']]
     print(elec_con_epc)
 
 
     #EQUIPOS
-    elect_sist_equ=elect_sist_equ.iloc[:, lambda elect_sist_equ: [4,8,15,16,23,27,43,44,46,48]]
+    elect_sist_equ=elect_sist_equ.iloc[:, lambda elect_sist_equ: [4,8,15,16,23,27,42,44,46,48]]
     elect_sist_equ.columns = ['area','TAG','Und','Cant_Tot','Montaje','Cant_Avan','HH_Tot','HH_Avan','SUBSISTEMA','QUIEBRE_OT']
 
     elect_sist_equ = elect_sist_equ[elect_sist_equ['area'] != 320]
@@ -709,7 +717,9 @@ def sist_import_elect():
     elect_sist_equ['disc'] = 'ELECT'
 
 
-    elec_con_equ = elect_sist_equ[['QUIEBRE_OT','SUBSISTEMA','Cant_Tot','Cant_Avan','Cant_Sal','Und','HH_Tot','HH_Avan','HH_Saldo','OTEC','disc']]
+    elec_con_equ = elect_sist_equ[['QUIEBRE_OT','SUBSISTEMA','TAG','Cant_Tot','Cant_Avan','Cant_Sal','Und','HH_Tot','HH_Avan','HH_Saldo','OTEC','disc']]
+    elec_con_equ = elec_con_equ[elec_con_equ['SUBSISTEMA'] != 'Eliminado' ]
+    elec_con_equ['SUBSISTEMA'] = elec_con_equ['SUBSISTEMA'].fillna('POR DEFINIR OTEC')
     print(elec_con_equ)
 
     Widget(my_frame3,"gray77", 15, 1, 150, 75).letra('Importado')
@@ -726,107 +736,110 @@ def sist_import_elect():
     elect_sist_inst['disc'] = 'ELECT'
     elect_sist_inst['Und'] = 'UND'
 
-    elec_con_inst = elect_sist_inst[['QUIEBRE_OT','SUBSISTEMA','Cant_Tot','Cant_Avan','Cant_Sal','Und','HH_Tot','HH_Avan','HH_Saldo','OTEC','disc']]
+    elec_con_inst = elect_sist_inst[['QUIEBRE_OT','SUBSISTEMA','TAG','Cant_Tot','Cant_Avan','Cant_Sal','Und','HH_Tot','HH_Avan','HH_Saldo','OTEC','disc']]
+    elec_con_inst = elec_con_inst[elec_con_inst['SUBSISTEMA'] != 'Falta PID con sistema']
+    elec_con_inst = elec_con_inst[elec_con_inst['SUBSISTEMA'] != 'HOLD']
+    elec_con_inst['SUBSISTEMA'] = elec_con_inst['SUBSISTEMA'].fillna('POR DEFINIR OTEC')
+    
     print(elec_con_inst)
-
 def sist_import_steel():
     global steel_conc,oocc_conc,arq_conc
 
     import_file_path = filedialog.askopenfilename()
     steel_sist= pd.read_excel(import_file_path,sheet_name='Steel')
+    steel_sist['TAG'] = 'No aplica' 
     oocc_sist= pd.read_excel(import_file_path,sheet_name='OOCC')
+    oocc_sist['TAG'] = 'No aplica' 
     arq_sist= pd.read_excel(import_file_path,sheet_name='ARQ')
-    steel_conc = steel_sist[['QUIEBRE_OT', 'SUBSISTEMA','Cant_Tot', 'Cant_Avan', 'Cant_Sal','Und', 'HH_Tot', 'HH_Avan', 'HH_Saldo',
+    arq_sist['TAG'] = 'No aplica' 
+
+
+
+    steel_conc = steel_sist[['QUIEBRE_OT', 'SUBSISTEMA','TAG','Cant_Tot', 'Cant_Avan', 'Cant_Sal','Und', 'HH_Tot', 'HH_Avan', 'HH_Saldo',
        'OTEC','disc']]
 
-    oocc_conc = oocc_sist[['QUIEBRE_OT', 'SUBSISTEMA','Cant_Tot', 'Cant_Avan', 'Cant_Sal','Und', 'HH_Tot', 'HH_Avan', 'HH_Saldo',
+    oocc_conc = oocc_sist[['QUIEBRE_OT', 'SUBSISTEMA','TAG','Cant_Tot', 'Cant_Avan', 'Cant_Sal','Und', 'HH_Tot', 'HH_Avan', 'HH_Saldo',
        'OTEC','disc']]
 
-    arq_conc = arq_sist[['QUIEBRE_OT', 'SUBSISTEMA','Cant_Tot', 'Cant_Avan', 'Cant_Sal','Und', 'HH_Tot', 'HH_Avan', 'HH_Saldo',
+    arq_conc = arq_sist[['QUIEBRE_OT', 'SUBSISTEMA','TAG','Cant_Tot', 'Cant_Avan', 'Cant_Sal','Und', 'HH_Tot', 'HH_Avan', 'HH_Saldo',
        'OTEC','disc']]
-
-
 
 
     Widget(my_frame3,"gray77", 15, 1, 150, 110).letra('Importado')
 
-
 #Import Fechas
 def sist_import_list():
-    global list_sist, list_sist_1
+    global df_sub,export_agr_subsist,export_agr_subsist_d,export_agr_subsist_q,export,export_agr_quiebre
+
     import_file_path = filedialog.askopenfilename()
-    list_sist_1 = pd.read_excel(import_file_path,sheet_name='data')
+    list_sist = pd.read_excel(import_file_path,sheet_name='data')
+    list_sist['FIN'] = pd.to_datetime(list_sist.FIN).dt.date 
+    list_sist['Actual'] = pd.to_datetime(list_sist.Actual).dt.date 
 
-    list_sist = list_sist_1[list_sist_1['ALCANCE'] == 'VP2']
+    export = pd.concat([pip_conc,mec_conc,elec_con_cab,elec_con_al,elec_con_mall,elec_con_epc,elec_con_equ,elec_con_inst,steel_conc,oocc_conc,arq_conc],axis=0)
+    export_agr_quiebre = export.groupby(['disc','OTEC','QUIEBRE_OT']).sum()
+    export_agr_quiebre['Percent'] = 1-export_agr_quiebre.HH_Saldo/export_agr_quiebre.HH_Tot
+    
+    export_agr_subsist = export.groupby(['SUBSISTEMA']).sum()
+    export_agr_subsist_d = export.groupby(['SUBSISTEMA','disc']).sum()
+    export_agr_subsist_q = export.groupby(['SUBSISTEMA','disc','QUIEBRE_OT']).sum()
+    export_agr_subsist['Percent'] = 1-export_agr_subsist.HH_Saldo/export_agr_subsist.HH_Tot
+    export_agr_subsist_d['Percent'] = 1-export_agr_subsist_d.HH_Saldo/export_agr_subsist_d.HH_Tot
+    export_agr_subsist_q['Percent'] = 1-export_agr_subsist_q.HH_Saldo/export_agr_subsist_q.HH_Tot
 
-    pd.to_datetime(list_sist.FIN).dt.date 
-    pd.to_datetime(list_sist.Actual).dt.date 
+    d_sub = export_agr_subsist_d.reset_index()
+    d_sub = d_sub.merge(list_sist, on='SUBSISTEMA', how='outer')
+    df_sub = d_sub.dropna(subset=['HH_Tot'])
+
+    df_sub.to_excel('Listado_final.xlsx')
+    print(df_sub)
+    print(df_sub.columns)
+
 
     Widget(my_frame3,"gray77", 15, 1, 150, 110).letra('Importado')
 
 #Power Bi
 def sist_export_report_bi():
 
-    
-    sist_tot  = pd.concat([pip_sist_gen[['Disciplina','TAG','SUBSISTEMA','HH_TOTAL','HH_SALDO']],mec_sist[['Disciplina','TAG','SUBSISTEMA','HH_TOTAL','HH_SALDO']],
-                        elect_sist_cab[['Disciplina','TAG','SUBSISTEMA','HH_TOTAL','HH_SALDO']]],axis=0)
 
-
-    sist_tot_g = sist_tot.groupby(['SUBSISTEMA','Disciplina']).sum()
-    sist_tot_g['Avance'] = 1-sist_tot_g.HH_SALDO/sist_tot_g.HH_TOTAL
-
-    sist_tot_gt = sist_tot.groupby(['SUBSISTEMA']).sum()
-    sist_tot_g =  sist_tot_g.reset_index(level=['SUBSISTEMA','Disciplina'])
-    sist_tot_gt['Avance'] = 1-sist_tot_gt.HH_SALDO/sist_tot_gt.HH_TOTAL
-    sist_tot_gt =  sist_tot_gt.reset_index(level=['SUBSISTEMA'])
-    
-    #Extraer los nombres de sistemas a los avances de disciplinas
-    sist_tot_gs = sist_tot_g.merge(list_sist_1[['SUBSISTEMA', 'DESCRIP','LINEA','1ER_COBRE','Actual','FIN','Saldo_dias']], on='SUBSISTEMA',
-                    how='left')
-
-    #Extraer el listado de sistermas a los avances agrupado
-    sist_tot_gts = sist_tot_gt.merge(list_sist_1[['SUBSISTEMA', 'DESCRIP','LINEA','1ER_COBRE','Actual','FIN','Saldo_dias']], on='SUBSISTEMA',
-                    how='left')
-
-    #Extraes los avances al listado de sistemas
-    list_sist_g = list_sist.merge(sist_tot_g[['SUBSISTEMA','Disciplina','HH_TOTAL','HH_SALDO','Avance']], on='SUBSISTEMA',
-                    how='left')
-    list_sist_g['HH_Sem'] = list_sist_g.HH_SALDO/(list_sist_g['Saldo_dias'])*7
+    df_sub['HH_Sem'] = df_sub.HH_Saldo/(df_sub['Saldo_dias'])*7
 
     n=0
 
-    titulos_1 = ['ITEM', 'CODE', 'AREA', 'SUBSISTEMA', 'DESCRIP', 'CONTRATO', 'TIPO',
-       'CONTRATO.1', 'DEF', 'LINEA', '1ER_COBRE', 'Actual', 'FIN',
-       'Saldo_dias', 'Disciplina', 'HH_TOTAL', 'HH_SALDO', 'Avance', 'HH_Sem',
-       'HH_Dia']
+    titulos_1 =['SUBSISTEMA', 'disc', 'Cant_Tot', 'Cant_Sal', 'HH_Tot', 'HH_Saldo',
+       'Percent', 'ITEM', 'CODE', 'AREA', 'DESCRIP', 'CONTRATO', 'TIPO',
+       'ALCANCE', 'DEF', 'LINEA', '1ER_COBRE', 'Actual', 'FIN', 'Saldo_dias','HH_Sem','HH_Dia']
 
     df_temp = pd.DataFrame(columns=titulos_1)
  
-    for i in list_sist_g.index:
+    for i in df_sub.index:
 
         print(i)
 
-        ft = [list_sist_g.iloc[n,11] + timedelta(days=d) for d in range((list_sist_g.iloc[n,12] - list_sist_g.iloc[n,11]).days + 1)]  # CREAMOS LA LISTA DE FECHAS
+        ft = [df_sub.iloc[n,17] + timedelta(days=d) for d in range((df_sub.iloc[n,18] - df_sub.iloc[n,17]).days + 1)]  # CREAMOS LA LISTA DE FECHAS
         dft = pd.DataFrame({'FECHA': ft})
 
-        dft['HH_Dia'] = list_sist_g.iloc[n,16]/len(dft)
-        dft['HH_Tot'] = list_sist_g.iloc[n,15]/len(dft)
-        dftv = list_sist_g.iloc[[i]]
+        dft['HH_Dia'] = df_sub.iloc[n,5]/len(dft)
+        dft['HH_Final'] = df_sub.iloc[n,4]/len(dft)
+        dftv = df_sub.iloc[[i]]
         dftv['FECHA'] = ft[0]
         dftv.set_index('FECHA',inplace =True )
+        print(dftv)
         dft.set_index('FECHA',inplace =True)
-
         res = pd.concat([dftv,dft],axis=1)
         res = res.fillna(method='ffill')   
+        print(res)
         df_temp = pd.concat([df_temp,res],axis=0)
         print(df_temp)
         print(n)
         n=n+1
-    
 
-    del df_temp['HH_TOTAL']
-    del df_temp['HH_SALDO']
-    del df_temp['Avance']
+    
+    print(df_temp)
+
+
+    del df_temp['HH_Tot']
+    del df_temp['HH_Saldo']
     del df_temp['HH_Sem']
 
     df_temp.reset_index(level=0, inplace=True)
@@ -834,55 +847,28 @@ def sist_export_report_bi():
     df_temp['FECHA']=pd.to_datetime(df_temp.Fecha).dt.date   
     df_temp = Semana(df_temp).split()  
 
-    df_temp['Disciplina'] = np.where(df_temp.Disciplina.isnull(),"NA",df_temp['Disciplina'])
+    df_temp['disc'] = np.where(df_temp.disc.isnull(),"NA",df_temp['disc'])
     df_temp['1ER_COBRE'] =  np.where(df_temp['1ER_COBRE'].isnull(),"NA",df_temp['1ER_COBRE'])    
+    # df_temp = df_temp.dropna(subset=['Percent'])
+
+    del df_temp['Fecha']
         
-
-    #Extraes los avances al listado de sistemas
-    list_sist_gt = list_sist.merge(sist_tot_gt[['SUBSISTEMA','HH_TOTAL','HH_SALDO','Avance']], on='SUBSISTEMA',
-                    how='left')
-    list_sist_gt['HH_Sem'] = list_sist_gt.HH_SALDO/(list_sist_gt['Saldo_dias'])*7
-    sist_tot = sist_tot.merge(list_sist_1[['SUBSISTEMA', 'DESCRIP','LINEA','1ER_COBRE','Actual','FIN','Saldo_dias']], on='SUBSISTEMA',
-                    how='left')
-
-
     export_file = filedialog.askdirectory()  # Buscamos el directorio para guardar
     writer = pd.ExcelWriter(export_file + '/' + 'Sistemas_QB2.xlsx')  # Creamos una excel y le indicamos la ruta
 
-    # Exportar Steel
-    sist_tot_gs.to_excel(writer, sheet_name='Det_Disc_sist', index=False)
-    sist_tot_gts.to_excel(writer, sheet_name='Agru_Disc_Sist', index=True)
-    list_sist_g.to_excel(writer, sheet_name='Det_Sist_Disc', index=False)
-    list_sist_gt.to_excel(writer, sheet_name='Agru_Sist_Disc', index=False)
+
+    
+    export.to_excel(writer, sheet_name='Det_Disc_sist', index=True)
+    export_agr_quiebre.to_excel(writer, sheet_name='QUIEBRE', index=True)
+    export_agr_subsist.to_excel(writer, sheet_name='SUBSISTEMA', index=True)
+    export_agr_subsist_d.to_excel(writer, sheet_name='SUBSISTEMA_dis', index=True)
+    export_agr_subsist_d.to_excel(writer, sheet_name='SUBSISTEMA_quie', index=True)
     df_temp.to_excel(writer, sheet_name='PowerBi', index=False)
-    sist_tot.to_excel(writer, sheet_name='PowerBi_1', index=False)
-
-
-
+    df_sub.to_excel(writer, sheet_name='data', index=False)
 
     Widget(my_frame3,"gray77", 1, 1, 150, 145).letra('OK')
 
     writer.save()
-
-
-#reporte Excel
-def sist_export_report():
-
-    export = pd.concat([pip_conc,mec_conc,elec_con_cab,elec_con_al,elec_con_mall,elec_con_epc,elec_con_equ,elec_con_inst,steel_conc,oocc_conc,arq_conc],axis=0)
-    export_agr = export.groupby(['disc','OTEC','QUIEBRE_OT']).sum()
-
-    export_file = filedialog.askdirectory()  # Buscamos el directorio para guardar
-    writer = pd.ExcelWriter(export_file + '/' + 'Saldos de obra SS.xlsx')  # Creamos una excel y le indicamos la 
-    
-    # Exportar Steel
-    export.to_excel(writer, sheet_name='Det_Disc_sist', index=True)
-    export_agr.to_excel(writer, sheet_name='resumen', index=True)
-    
-
-    writer.save()
-
-    Widget(my_frame3,"gray77", 15, 1, 150, 165).letra('Exportado')
-
 
 
 #Funcion asistencia
@@ -1002,9 +988,8 @@ Widget(my_frame3,"gray56", 15, 1, 250, 40).boton('Importar Mec',sist_import_mec)
 Widget(my_frame3,"gray56", 15, 1, 250, 75).boton('Importar Elect',sist_import_elect)
 Widget(my_frame3,"gray56", 15, 1, 250, 110).boton('Import Steel&OOCC',sist_import_steel)
 
-Widget(my_frame3,"gray56", 15, 1, 250, 145).boton('Import Listado Sist',sist_import_list)
-Widget(my_frame3,"gray56", 15, 1, 250, 180).boton('Export Report bi',sist_export_report_bi)
-Widget(my_frame3,"gray56", 15, 1, 250, 215).boton('Export Report gral',sist_export_report)
+Widget(my_frame3,"gray56", 15, 1, 250, 180).boton('Import Listado Sist',sist_import_list)
+Widget(my_frame3,"gray56", 15, 1, 250, 215).boton('Export Report bi',sist_export_report_bi)
 
 
 #Frame4
