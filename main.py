@@ -375,125 +375,383 @@ def pte_export_tekla():
 
     Widget(my_frame2,"gray77", 1, 1, 150, 165).letra('Exportado')
 
+
 #Función Systemas
 def sist_import_piping():
 
-    global pip_sist_gen
+
+    global pip_tot, pip_tot_res,pip_conc
+
     import_file_path = filedialog.askopenfilename()
     pip_sist_1 = pd.read_excel(import_file_path,sheet_name='Cub General ',skiprows=10)
     pip_sist_2 = pd.read_excel(import_file_path,sheet_name='Cub Linea Menor',skiprows=9)
+    pip_sist_3 = pd.read_excel(import_file_path,sheet_name='Cub Valvulas',skiprows=9)
+    pip_sist_4 = pd.read_excel(import_file_path,sheet_name='Cub Soportes ',skiprows=4)
 
-    pip_sist_gen = pip_sist_1[['ISOMETRICO','UG/AG/OR','Diametro','Metros cañerias fore cast 11','SUB-SISTEMA',
-                        'AVANCE FINAL','HH\nAVANCE','HH TOTAL']]
+    print(pip_sist_1.columns)
+    print(pip_sist_2.columns)
+    print(pip_sist_3.columns)
+    print(pip_sist_4.columns)
 
-    pip_sist_men = pip_sist_2[['ISOMETRICOS','Diametro','Metros cañerias','SUB \nSISTEMA',
-                        'AVANCE TOTAL\nAG','HH\nAVANCE','HH TOTAL']]
+    #LECTURA DE PLANTILLAS OTEC
+
+    pip_sist_gen = pip_sist_1[['COD','SUB-SISTEMA','Codigo Fluido','UG/AG/OR','ISOMETRICO','Metros Aislados','Diametro','Metros cañerias fore cast 11',
+                        'AVANCE FINAL','HH TOTAL','HH\nAVANCE']]
+
+    pip_sist_men = pip_sist_2[['SUB \nSISTEMA','Codigo Fluido','ISOMETRICOS','Metros Aislados','Diametro','Metros cañerias',
+                        'AVANCE TOTAL\nAG','HH TOTAL','HH\nAVANCE']]
     
-    print(pip_sist_men)
-    print(pip_sist_men.columns)
-    
-    pip_sist_gen.rename(columns={'SUB-SISTEMA': 'SUBSISTEMA','HH TOTAL': 'HH_TOTAL','Metros cañerias fore cast 11': 'LONG','Diametro':'DIAMETRO','AVANCE FINAL':'m_equi',
-                                'HH\nAVANCE':'HH_AVANCE','ISOMETRICO':'TAG'},
+    pip_sist_valv = pip_sist_3[['SUB \nSISTEMA','Codigo Fluido','Isometrico','Diametro','Cantidad',
+                         'AVANCE TOTAL\nAG','HH TOTAL','HH\nAVANCE']]
+    pip_sist_soport = pip_sist_4[['Isometrico','Diametro','Peso soporte total KG','KG']]
+
+
+    #CUBICACION GENERAL
+    pip_sist_gen.rename(columns={'COD': 'QUIEBRE_OT','SUB-SISTEMA': 'SUBSISTEMA','HH TOTAL': 'HH_Tot','Metros cañerias fore cast 11': 'Cant_Tot','Diametro':'DIAMETRO','AVANCE FINAL':'Cant_Avan',
+                                'HH\nAVANCE':'HH_Avan','ISOMETRICO':'TAG','UG/AG/OR':'Niv','Codigo Fluido':'Fluid'},
                        inplace=True)
 
-    pip_sist_gen['HH_SALDO'] = pip_sist_gen['HH_TOTAL'].subtract(pip_sist_gen["HH_AVANCE"])
+    #INFO TEMPORAL PARA EXTRAR EL SUBSISTEMA
+    iso_sub = pip_sist_gen[['TAG','SUBSISTEMA','Fluid']]
+    iso_sub['ISO'] = iso_sub['TAG'].str[:13]
+    del iso_sub['TAG']
 
-    print(pip_sist_gen.columns)
+    iso_sub = iso_sub.groupby(['ISO']).first()
+    iso_sub = iso_sub.reset_index()
 
-    pip_sist_gen = pip_sist_gen.fillna(0)
-    pip_sist_gen['Disciplina'] = "Piping"
+    print(iso_sub)
 
-    pip_sist_gen['HH_TOTAL'] = pd.to_numeric(pip_sist_gen['HH_TOTAL'], errors='coerce').mean()
-    pip_sist_gen['HH_SALDO'] = pd.to_numeric(pip_sist_gen['HH_SALDO'], errors='coerce').mean()
+    iso_sub.to_excel('iso_sub.xlsx')
+
+    pip_sist_gen = pip_sist_gen[pip_sist_gen['QUIEBRE_OT'] != 'FA']
+
+    pip_sist_gen = pip_sist_gen.fillna(0)   
+
+    pip_sist_gen['HH_Saldo'] = pip_sist_gen['HH_Tot'].subtract(pip_sist_gen["HH_Avan"])
+    pip_sist_gen.insert(9, 'Cant_Sal', pip_sist_gen['Cant_Tot'].subtract(pip_sist_gen["Cant_Avan"]))
+
+    pip_sist_gen['OTEC'] = 'General'
+    pip_sist_gen['Und'] = 'ml'
+    pip_sist_gen['ISO'] = pip_sist_gen['TAG'].str[:13]
+
+    pip_sist_gen = pip_sist_gen[pip_sist_gen['QUIEBRE_OT'] != 0]
+
+
+
+    #LINEA MENOR
+    pip_sist_men.rename(columns={'SUB \nSISTEMA': 'SUBSISTEMA','HH TOTAL': 'HH_Tot','Metros cañerias': 'Cant_Tot','Diametro':'DIAMETRO','AVANCE TOTAL\nAG':'Cant_Avan',
+                                'HH\nAVANCE':'HH_Avan','ISOMETRICOS':'TAG','Codigo Fluido':'Fluid'},inplace=True)
+
+    pip_sist_men = pip_sist_men.fillna(0)
+
+    pip_sist_men['HH_Saldo'] = pip_sist_men['HH_Tot'].subtract(pip_sist_men["HH_Avan"])
+    
+    pip_sist_men.insert(0, 'QUIEBRE_OT', 'Cañeria-SB (m)')
+    pip_sist_men.insert(3, 'Niv', 'AG')
+
+    pip_sist_men.insert(9, 'Cant_Sal', pip_sist_men['Cant_Tot'].subtract(pip_sist_men["Cant_Avan"]))
+
+    pip_sist_men['OTEC'] = 'Linea_menor'
+    pip_sist_men['Und'] = 'ml'
+    pip_sist_men['ISO'] = pip_sist_men['TAG'].str[:13]
+
+    pip_sist_men = pip_sist_men[pip_sist_men['QUIEBRE_OT'] != 0]
+
+
+    #VAVULAS
+
+    pip_sist_valv.rename(columns={'SUB \nSISTEMA': 'SUBSISTEMA','HH TOTAL': 'HH_Tot','Cantidad': 'Cant_Tot','Diametro':'DIAMETRO','AVANCE TOTAL\nAG':'Cant_Avan',
+                                'HH\nAVANCE':'HH_Avan','Isometrico':'TAG','Codigo Fluido':'Fluid'},inplace=True)
+
+    pip_sist_valv = pip_sist_valv.fillna(0)
+
+    pip_sist_valv['HH_Saldo'] = pip_sist_valv['HH_Tot'].subtract(pip_sist_valv["HH_Avan"])
+    
+    pip_sist_valv.insert(0, 'QUIEBRE_OT', 'Cañería-LB (válvula)')
+    pip_sist_valv.insert(3, 'Niv', 'AG')
+
+    pip_sist_valv.insert(8, 'Cant_Sal', pip_sist_valv['Cant_Tot'].subtract(pip_sist_valv["Cant_Avan"]))
+
+    pip_sist_valv['OTEC'] = 'Valvulas'
+    pip_sist_valv['Und'] = 'Und'
+    pip_sist_valv['ISO'] = pip_sist_valv['TAG'].str[:13]
+    pip_sist_valv.insert(5, 'Metros Aislados', 'NA')
+
+
+    #SOPORTERIA
+    pip_sist_soport.rename(columns={'Peso soporte total KG': 'Cant_Tot','Diametro':'DIAMETRO','KG':'Cant_Avan','Isometrico':'TAG'},inplace=True)
+
+    pip_sist_soport['ISO'] = pip_sist_soport['TAG'].str[:13]
+
+    pip_sist_soport = pip_sist_soport.groupby(['ISO']).sum()
+
+    pip_sist_soport = pip_sist_soport.reset_index()
+    pip_sist_soport['HH_Tot'] = 0.42*pip_sist_soport.Cant_Tot
+    pip_sist_soport['HH_Avan'] = 0.42*pip_sist_soport.Cant_Avan
+
+
+    pip_sist_soport = pip_sist_soport.merge(iso_sub[['ISO','SUBSISTEMA','Fluid']], on='ISO', how='left')
+    pip_sist_soport = pip_sist_soport.dropna(subset=['SUBSISTEMA'])
+
+
+    pip_sist_soport.insert(0, 'QUIEBRE_OT', 'Cañería LB&SB (soporte)')
+    pip_sist_soport = pip_sist_soport[['QUIEBRE_OT','SUBSISTEMA','Fluid','Cant_Tot','Cant_Avan','HH_Tot','HH_Avan','ISO']]
+
+    pip_sist_soport.insert(3, 'Niv', 'AG')
+    pip_sist_soport.insert(4, 'TAG', pip_sist_soport.ISO)
+    pip_sist_soport.insert(5, 'DIAMETRO', 'NA')
+    pip_sist_soport.insert(8, 'Cant_Sal', pip_sist_soport['Cant_Tot'].subtract(pip_sist_soport["Cant_Avan"]))
+    pip_sist_soport.insert(11, 'HH_Saldo', pip_sist_soport['HH_Tot'].subtract(pip_sist_soport["HH_Avan"]))
+    pip_sist_soport['OTEC'] = 'Valvulas'
+    pip_sist_soport['Und'] = 'Und'
+    del pip_sist_soport[ 'ISO']
+    pip_sist_soport[ 'ISO'] = pip_sist_soport[ 'TAG']
+
+    pip_sist_soport.insert(5, 'Metros Aislados', 'NA')
+
+    print(pip_sist_soport)
 
     print(pip_sist_gen)
-    print(pip_sist_gen.columns)
-    print(pip_sist_gen[['Disciplina','TAG','SUBSISTEMA','HH_TOTAL','HH_SALDO']])
+    print(pip_sist_men)
+    print(pip_sist_valv.columns)
 
+    #Aislamiento
 
+    pip_aisl = pd.concat([pip_sist_gen,pip_sist_men],axis=0)
+    pip_aisl['Cant_Tot'] = pip_aisl['Metros Aislados']
+    pip_aisl['HH_Tot'] = pip_aisl['Cant_Tot']*4.54
+    pip_aisl['HH_Avan'] = 0
+    pip_aisl['Cant_Avan'] = 0
+    pip_aisl['HH_Saldo'] = pip_aisl['HH_Tot']
+    pip_aisl['Cant_Sal'] = pip_aisl['Cant_Tot']
+    pip_aisl['Und'] = 'ml-Aisl'
+    pip_aisl = pip_aisl.dropna(subset=['Cant_Tot'])
 
+    pip_aisl['quiebre'] = np.where(pip_aisl.QUIEBRE_OT == 'Cañería-LB (m)','Cañería-LB (aislamiento)','Cañería-SB (aislamiento)')
+    del pip_aisl['QUIEBRE_OT']
+    pip_aisl.insert(0, 'QUIEBRE_OT',pip_aisl['quiebre'])
+    del pip_aisl['quiebre']
 
+    print(pip_aisl)
 
+    #AGRUPAMIENTO FINAL
+    pip_tot = pd.concat([pip_sist_gen,pip_sist_men,pip_sist_valv,pip_sist_soport,pip_aisl],axis=0)
+    pip_tot['disc'] = 'Piping'
+    pip_tot_res = pip_tot.groupby(['QUIEBRE_OT']).sum()
 
-    # pip_ug = pip_sist_gen[pip_sist_gen['ABV_BEL_RACK']=="UG"]
-    # pip_ag = pip_sist_gen[pip_sist_gen['ABV_BEL_RACK']=="AG"]
-
-    # pip_ug = pip_ug[['ABV_BEL_RACK','SUBSISTEMA','TAG','RATIO','FLUIDO','DIAMETRO','LONG','UG_MWR','UG_TRASL','UG_PREP','UG_SOLD','UG_INSP','UG_PUNCH']]
-    # pip_ag = pip_ag[['ABV_BEL_RACK','SUBSISTEMA','TAG','RATIO','FLUIDO','DIAMETRO','LONG','AG_MWR','AG_TRASL','AG_FABR','AG_PREP','AG_SOLD','AG_INSP','AG_PUNCH']]
-
-    # #Calculamos el avance equivalente
-    # pip_ag['ml_eq'] = pip_ag.AG_MWR*0.05+pip_ag.AG_TRASL*0.05+pip_ag.AG_FABR*0.1+pip_ag.AG_PREP*0.1+pip_ag.AG_SOLD*0.55+pip_ag.AG_INSP*0.1+pip_ag.AG_PUNCH*0.05
-    # pip_ug['ml_eq'] = pip_ug.UG_MWR*0.05+pip_ug.UG_TRASL*0.05+pip_ug.UG_PREP*0.23+pip_ug.UG_SOLD*0.47+pip_ug.UG_INSP*0.15+pip_ug.UG_PUNCH*0.05
-
-    # pip_ag['HH_AVAN'] = pip_ag.ml_eq*pip_ag.RATIO
-    # pip_ug['HH_AVAN'] = pip_ug.ml_eq*pip_ug.RATIO
-
-    
-    # pip_ag['HH_TOTAL'] = pip_ag.LONG*pip_ag.RATIO
-    # pip_ug['HH_TOTAL'] = pip_ug.LONG*pip_ug.RATIO
-
-
-
-    # pip_ug = pip_ug[['SUBSISTEMA','TAG','RATIO','FLUIDO','DIAMETRO','LONG','ml_eq','HH_AVAN','HH_TOTAL','ABV_BEL_RACK']]
-    # pip_ag = pip_ag[['SUBSISTEMA','TAG','RATIO','FLUIDO','DIAMETRO','LONG','ml_eq','HH_AVAN','HH_TOTAL','ABV_BEL_RACK']]
-
-    # pip_gen = pd.concat([pip_ug,pip_ag],axis=0)
-    # pip_gen = pip_gen.fillna(0)
-    # pip_gen['Disciplina'] = "Piping"
-    # pip_gen['HH_SALDO'] = pip_gen.HH_TOTAL - pip_gen.HH_AVAN
-
-    # print(pip_gen)
-    # print(pip_gen.columns)
-
-    # print(pip_gen.HH_TOTAL.sum())
-    # print(pip_ag.LONG.sum())
-    # print(pip_ug.LONG.sum())
-    # print(pip_gen.LONG.sum())
+    pip_conc = pip_tot[['QUIEBRE_OT', 'SUBSISTEMA','Cant_Tot', 'Cant_Avan', 'Cant_Sal','Und', 'HH_Tot', 'HH_Avan', 'HH_Saldo',
+       'OTEC','disc']]
 
 
     Widget(my_frame3,"gray77", 15, 1, 150, 5).letra('Importado')
 def sist_import_mec():
-    global mec_sist
+    global mec_sist, mec_conc
     import_file_path = filedialog.askopenfilename()
     mec_sist = pd.read_excel(import_file_path,sheet_name='Base Datos',skiprows=6)
 
 
-    mec_sist = mec_sist[['TAG','Disciplina','SUBSIST','HH UND','HH SALDO']]
-    mec_sist.rename(columns={'SUBSIST': 'SUBSISTEMA','HH UND': 'HH_TOTAL','HH SALDO': 'HH_SALDO'},
+    mec_sist = mec_sist[['TAG','SUBSIST','UND','HH UND','HH SALDO','Disciplina']]
+    mec_sist.rename(columns={'SUBSIST': 'SUBSISTEMA','HH UND': 'HH_Tot','HH SALDO': 'HH_Saldo'},
                        inplace=True)
 
+    mec_sist = mec_sist.dropna(subset=['UND'])
+
+
+    def conditions(x):
+        if x == 'EA':
+            return "EQ (und)"
+        elif x == 'EA#':
+            return "EQ (und)"
+        elif x == 'M':
+            return "EQ (m)"
+        elif x == 'MT':
+            return "EQ (ton)"
+        elif x == 'MT#':
+            return "EQ (ton)"
+        else:
+            return "NA"
+
+    func = np.vectorize(conditions)
+    energy_class = func(mec_sist["UND"])
+
+    mec_sist.insert(0, 'QUIEBRE_OT',energy_class)
+
+    # mec_sist["QUIEBRE_OT"] = energy_class
+
     mec_sist = mec_sist.fillna(0)
-    print(mec_sist.columns)
-    print(mec_sist)
-    mec_sist['HH_TOTAL'] = pd.to_numeric(mec_sist['HH_TOTAL'], errors='coerce').mean()
-    mec_sist['HH_SALDO'] = pd.to_numeric(mec_sist['HH_SALDO'], errors='coerce').mean()
+
+    mec_sist.insert(4, 'HH_Avan' , mec_sist['HH_Tot'].subtract(mec_sist["HH_Saldo"]))
+    mec_sist.insert(3, 'Cant_Tot' , mec_sist.HH_Tot)
+    mec_sist.insert(4, 'Cant_Avan' , mec_sist.HH_Avan)
+    mec_sist.insert(5, 'Cant_Sal' , mec_sist.HH_Saldo)
+
+    mec_sist['OTEC'] = 'Base_Datos'
+    mec_sist['disc'] = mec_sist.Disciplina
+    del mec_sist['Disciplina']
+    del mec_sist['UND']
+
+    mec_conc = mec_sist
+
+    del mec_conc['TAG']
     
-    print(mec_sist['HH_TOTAL'].sum())
-    print(mec_sist['HH_SALDO'].sum())
+
+    print(mec_sist)
+
 
 
     Widget(my_frame3,"gray77", 15, 1, 150, 40).letra('Importado')
 def sist_import_elect():
-    global elect_sist
+    global elect_sist_cab,elec_con_cab,elec_con_al,elec_con_mall,elec_con_epc,elec_con_equ,elec_con_inst
     import_file_path = filedialog.askopenfilename()
-    elect_sist = pd.read_excel(import_file_path,sheet_name='Cables',skiprows=10)
+    elect_sist_cab = pd.read_excel(import_file_path,sheet_name='Cables',skiprows=10)
+    elect_sist_alu = pd.read_excel(import_file_path,sheet_name='Alumbrado',skiprows=10)
+    elect_sist_malla = pd.read_excel(import_file_path,sheet_name='Malla a Tierra',skiprows=11)
+    elect_sist_epc = pd.read_excel(import_file_path,sheet_name='EPC',skiprows=10)
+    elect_sist_equ = pd.read_excel(import_file_path,sheet_name='Eq.salas.trafos',skiprows=15)
+    elect_sist_inst = pd.read_excel(import_file_path,sheet_name='Instrumentos',skiprows=8)
 
-    elect_sist=elect_sist.iloc[:, lambda elect_sist: [2,3,7,14,32,37,43,54,56,57,59]]
+    #CABLES
 
-    elect_sist.columns = ['SUBSISTEMA','Área','TAG','Cantidad','Tendido','Avance','Tipo cab le','Linea','HH_TOTAL','HH_AVANCE','1ERCOBRE']
+    elect_sist_cab=elect_sist_cab.iloc[:, lambda elect_sist_cab: [2,3,7,14,32,37,43,54,56,57,59]]
+    elect_sist_cab.columns = ['SUBSISTEMA','Área','TAG','Cantidad','Tendido','Avance','Tipo cable','Linea','HH_TOTAL','HH_AVANCE','1ERCOBRE']
 
-    elect_sist['HH_SALDO'] = elect_sist['HH_TOTAL'].subtract(elect_sist["HH_AVANCE"])
-    elect_sist['Disciplina'] = 'Electricidad'
+    elect_sist_cab.rename(columns={'Tipo cable': 'QUIEBRE_OT','HH_TOTAL': 'HH_Tot','Cantidad': 'Cant_Tot','Avance':'Cant_Avan',
+                                'HH_AVANCE':'HH_Avan'},
+                       inplace=True)
 
-    elect_sist = elect_sist.dropna(how='all')
+    elect_sist_cab = elect_sist_cab.dropna(subset=['QUIEBRE_OT'])
+    elect_sist_cab = elect_sist_cab.dropna(how='all')
 
-    print(elect_sist)
 
-    print(elect_sist['HH_TOTAL'].sum())
-    print(elect_sist['HH_SALDO'].sum())
+    elect_sist_cab['HH_Saldo'] = elect_sist_cab['HH_Tot'].subtract(elect_sist_cab["HH_Avan"])
+    elect_sist_cab['Cant_Sal'] = elect_sist_cab['Cant_Tot'].subtract(elect_sist_cab["Cant_Avan"])
+    elect_sist_cab['Und'] = 'ml'
+    elect_sist_cab['OTEC'] = 'CABLES'
+    elect_sist_cab['disc'] = 'ELECT'
+   
 
+    elec_con_cab = elect_sist_cab[['QUIEBRE_OT','SUBSISTEMA','Cant_Tot','Cant_Avan','Cant_Sal','Und','HH_Tot','HH_Avan','HH_Saldo','OTEC','disc']]
+    
+    print(elect_sist_cab['HH_Tot'].sum())
+    print(elect_sist_cab['HH_Avan'].sum())
+    print(elect_sist_cab['HH_Saldo'].sum())
+
+
+    #Alumbrado
+
+    elect_sist_alu=elect_sist_alu.iloc[:, lambda elect_sist_alu: [8,21,23,28,32,46,48,49]]
+    elect_sist_alu.columns = ['TAG','Und','Cant_Tot','Tendido','Cant_Avan','QUIEBRE_OT','HH_Tot','HH_Avan']
+
+    # elect_sist_alu['QUIEBRE_OT'] = elect_sist_alu['QUIEBRE_OT'].fillna(value='Por definir')
+    elect_sist_alu = elect_sist_alu.dropna(subset=['QUIEBRE_OT'])
+    elect_sist_alu = elect_sist_alu.dropna(how='all')
+
+    elect_sist_alu['HH_Saldo'] = elect_sist_alu['HH_Tot'].subtract(elect_sist_alu["HH_Avan"])
+    elect_sist_alu['Cant_Sal'] = elect_sist_alu['Cant_Tot'].subtract(elect_sist_alu["Cant_Avan"])
+    elect_sist_alu['OTEC'] = 'ALUMBRADO'
+    elect_sist_alu['disc'] = 'ELECT'
+    elect_sist_alu['SUBSISTEMA'] = '0310-NZC-001'
+
+    elec_con_al = elect_sist_alu[['QUIEBRE_OT','SUBSISTEMA','Cant_Tot','Cant_Avan','Cant_Sal','Und','HH_Tot','HH_Avan','HH_Saldo','OTEC','disc']]
+
+    
+
+    #MALLA
+
+    elect_sist_malla=elect_sist_malla.iloc[:, lambda elect_sist_malla: [11,17,18,25,28,39,41,42]]
+    elect_sist_malla.columns = ['TAG','Cant_Tot','Und','Tendido','Cant_Avan','QUIEBRE_OT','HH_Tot','HH_Avan']
+
+    print(elect_sist_malla)
+
+    elect_sist_malla = elect_sist_malla[elect_sist_malla['QUIEBRE_OT'] != 'Descope Aterramiento EPC']
+    elect_sist_malla = elect_sist_malla[elect_sist_malla['QUIEBRE_OT'] != 'Descope Malla Tierra']
+    elect_sist_malla = elect_sist_malla[elect_sist_malla['QUIEBRE_OT'] != 'Otro contrato Aterramiento EPC']
+
+    print(elect_sist_malla)
+
+    elect_sist_malla['HH_Saldo'] = elect_sist_malla['HH_Tot'].subtract(elect_sist_malla["HH_Avan"])
+    elect_sist_malla['Cant_Sal'] = elect_sist_malla['Cant_Tot'].subtract(elect_sist_malla["Cant_Avan"])
+    elect_sist_malla['OTEC'] = 'Malla a Tierra'
+    elect_sist_malla['disc'] = 'ELECT'
+    elect_sist_malla['SUBSISTEMA'] = '0310-NZC-001'
+
+    elec_con_mall = elect_sist_malla[['QUIEBRE_OT','SUBSISTEMA','Cant_Tot','Cant_Avan','Cant_Sal','Und','HH_Tot','HH_Avan','HH_Saldo','OTEC','disc']]
+
+    #EPC
+
+    elect_sist_epc=elect_sist_epc.iloc[:, lambda elect_sist_epc: [9,16,17,24,26,42,44,45]]
+    elect_sist_epc.columns = ['TAG','Cant_Tot','Und','Tendido','Cant_Avan','QUIEBRE_OT','HH_Tot','HH_Avan']
+
+    elect_sist_epc = elect_sist_epc[elect_sist_epc['QUIEBRE_OT'] != 'Descope']
+    elect_sist_epc = elect_sist_epc[elect_sist_epc['QUIEBRE_OT'] != 'Eliminado']
+
+
+    elect_sist_epc['HH_Saldo'] = elect_sist_epc['HH_Tot'].subtract(elect_sist_epc["HH_Avan"])
+    elect_sist_epc['Cant_Sal'] = elect_sist_epc['Cant_Tot'].subtract(elect_sist_epc["Cant_Avan"])
+    elect_sist_epc['OTEC'] = 'EPC'
+    elect_sist_epc['disc'] = 'ELECT'
+    elect_sist_epc['SUBSISTEMA'] = '0310-NZC-001'
+
+    elec_con_epc = elect_sist_epc[['QUIEBRE_OT','SUBSISTEMA','Cant_Tot','Cant_Avan','Cant_Sal','Und','HH_Tot','HH_Avan','HH_Saldo','OTEC','disc']]
+    print(elec_con_epc)
+
+
+    #EQUIPOS
+    elect_sist_equ=elect_sist_equ.iloc[:, lambda elect_sist_equ: [4,8,15,16,23,27,43,44,46,48]]
+    elect_sist_equ.columns = ['area','TAG','Und','Cant_Tot','Montaje','Cant_Avan','HH_Tot','HH_Avan','SUBSISTEMA','QUIEBRE_OT']
+
+    elect_sist_equ = elect_sist_equ[elect_sist_equ['area'] != 320]
+    elect_sist_equ['QUIEBRE_OT'] = elect_sist_equ['QUIEBRE_OT'].fillna('INDEFINIDO')
+
+    elect_sist_equ['HH_Saldo'] = elect_sist_equ['HH_Tot'].subtract(elect_sist_equ["HH_Avan"])
+    elect_sist_equ['Cant_Sal'] = elect_sist_equ['Cant_Tot'].subtract(elect_sist_equ["Cant_Avan"])
+    elect_sist_equ['OTEC'] = 'Equipos electricos'
+    elect_sist_equ['disc'] = 'ELECT'
+
+
+    elec_con_equ = elect_sist_equ[['QUIEBRE_OT','SUBSISTEMA','Cant_Tot','Cant_Avan','Cant_Sal','Und','HH_Tot','HH_Avan','HH_Saldo','OTEC','disc']]
+    print(elec_con_equ)
 
     Widget(my_frame3,"gray77", 15, 1, 150, 75).letra('Importado')
+
+    #inSTRUMENTOS
+
+    elect_sist_inst=elect_sist_inst.iloc[:, lambda elect_sist_inst: [11,3,7,30,37,39,48,49,55]] 
+    elect_sist_inst.columns = ['area','TAG','SUBSISTEMA','Cant_Tot','Montaje','Cant_Avan','HH_Tot','HH_Avan','QUIEBRE_OT']
+    elect_sist_inst = elect_sist_inst[elect_sist_inst['area'] != 320]
+    elect_sist_inst['QUIEBRE_OT'] = elect_sist_inst['QUIEBRE_OT'].fillna('INDEFINIDO')
+    elect_sist_inst['HH_Saldo'] = elect_sist_inst['HH_Tot'].subtract(elect_sist_inst["HH_Avan"])
+    elect_sist_inst['Cant_Sal'] = elect_sist_inst['Cant_Tot'].subtract(elect_sist_inst["Cant_Avan"])
+    elect_sist_inst['OTEC'] = 'Instrumentos'
+    elect_sist_inst['disc'] = 'ELECT'
+    elect_sist_inst['Und'] = 'UND'
+
+    elec_con_inst = elect_sist_inst[['QUIEBRE_OT','SUBSISTEMA','Cant_Tot','Cant_Avan','Cant_Sal','Und','HH_Tot','HH_Avan','HH_Saldo','OTEC','disc']]
+    print(elec_con_inst)
+
+def sist_import_steel():
+    global steel_conc,oocc_conc,arq_conc
+
+    import_file_path = filedialog.askopenfilename()
+    steel_sist= pd.read_excel(import_file_path,sheet_name='Steel')
+    oocc_sist= pd.read_excel(import_file_path,sheet_name='OOCC')
+    arq_sist= pd.read_excel(import_file_path,sheet_name='ARQ')
+    steel_conc = steel_sist[['QUIEBRE_OT', 'SUBSISTEMA','Cant_Tot', 'Cant_Avan', 'Cant_Sal','Und', 'HH_Tot', 'HH_Avan', 'HH_Saldo',
+       'OTEC','disc']]
+
+    oocc_conc = oocc_sist[['QUIEBRE_OT', 'SUBSISTEMA','Cant_Tot', 'Cant_Avan', 'Cant_Sal','Und', 'HH_Tot', 'HH_Avan', 'HH_Saldo',
+       'OTEC','disc']]
+
+    arq_conc = arq_sist[['QUIEBRE_OT', 'SUBSISTEMA','Cant_Tot', 'Cant_Avan', 'Cant_Sal','Und', 'HH_Tot', 'HH_Avan', 'HH_Saldo',
+       'OTEC','disc']]
+
+
+
+
+    Widget(my_frame3,"gray77", 15, 1, 150, 110).letra('Importado')
+
+
+#Import Fechas
 def sist_import_list():
     global list_sist, list_sist_1
     import_file_path = filedialog.askopenfilename()
@@ -505,13 +763,13 @@ def sist_import_list():
     pd.to_datetime(list_sist.Actual).dt.date 
 
     Widget(my_frame3,"gray77", 15, 1, 150, 110).letra('Importado')
-def sist_export_report():
-    print(pip_sist_gen[['Disciplina','TAG','SUBSISTEMA','HH_TOTAL','HH_SALDO']])
-    print(mec_sist[['Disciplina','TAG','SUBSISTEMA','HH_TOTAL','HH_SALDO']])
-    print(elect_sist[['Disciplina','TAG','SUBSISTEMA','HH_TOTAL','HH_SALDO']])
 
+#Power Bi
+def sist_export_report_bi():
+
+    
     sist_tot  = pd.concat([pip_sist_gen[['Disciplina','TAG','SUBSISTEMA','HH_TOTAL','HH_SALDO']],mec_sist[['Disciplina','TAG','SUBSISTEMA','HH_TOTAL','HH_SALDO']],
-                        elect_sist[['Disciplina','TAG','SUBSISTEMA','HH_TOTAL','HH_SALDO']]],axis=0)
+                        elect_sist_cab[['Disciplina','TAG','SUBSISTEMA','HH_TOTAL','HH_SALDO']]],axis=0)
 
 
     sist_tot_g = sist_tot.groupby(['SUBSISTEMA','Disciplina']).sum()
@@ -606,6 +864,27 @@ def sist_export_report():
 
     writer.save()
 
+
+#reporte Excel
+def sist_export_report():
+
+    export = pd.concat([pip_conc,mec_conc,elec_con_cab,elec_con_al,elec_con_mall,elec_con_epc,elec_con_equ,elec_con_inst,steel_conc,oocc_conc,arq_conc],axis=0)
+    export_agr = export.groupby(['disc','OTEC','QUIEBRE_OT']).sum()
+
+    export_file = filedialog.askdirectory()  # Buscamos el directorio para guardar
+    writer = pd.ExcelWriter(export_file + '/' + 'Saldos de obra SS.xlsx')  # Creamos una excel y le indicamos la 
+    
+    # Exportar Steel
+    export.to_excel(writer, sheet_name='Det_Disc_sist', index=True)
+    export_agr.to_excel(writer, sheet_name='resumen', index=True)
+    
+
+    writer.save()
+
+    Widget(my_frame3,"gray77", 15, 1, 150, 165).letra('Exportado')
+
+
+
 #Funcion asistencia
 def asistencia():
     global asist_direct_2, asist_direct_3
@@ -683,7 +962,7 @@ def export_asis():
     writer.save()
 root = Tk()
 root.title('Control Panel')
-root.geometry("380x235")
+root.geometry("380x270")
 
 my_notebook = ttk.Notebook(root)
 my_notebook.pack()
@@ -721,8 +1000,11 @@ Widget(my_frame2,"gray56", 15, 1, 250, 165).boton('Exportar avance',pte_export_t
 Widget(my_frame3,"gray56", 15, 1, 250, 5).boton('Importar Piping',sist_import_piping)
 Widget(my_frame3,"gray56", 15, 1, 250, 40).boton('Importar Mec',sist_import_mec)
 Widget(my_frame3,"gray56", 15, 1, 250, 75).boton('Importar Elect',sist_import_elect)
-Widget(my_frame3,"gray56", 15, 1, 250, 110).boton('Import Listado Sist',sist_import_list)
-Widget(my_frame3,"gray56", 15, 1, 250, 145).boton('Export Report',sist_export_report)
+Widget(my_frame3,"gray56", 15, 1, 250, 110).boton('Import Steel&OOCC',sist_import_steel)
+
+Widget(my_frame3,"gray56", 15, 1, 250, 145).boton('Import Listado Sist',sist_import_list)
+Widget(my_frame3,"gray56", 15, 1, 250, 180).boton('Export Report bi',sist_export_report_bi)
+Widget(my_frame3,"gray56", 15, 1, 250, 215).boton('Export Report gral',sist_export_report)
 
 
 #Frame4
