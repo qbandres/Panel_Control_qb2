@@ -771,31 +771,44 @@ def sist_import_steel():
 
 #Import Fechas
 def sist_import_list():
-    global df_sub,export_agr_subsist,export_agr_subsist_d,export_agr_subsist_q,export,export_agr_quiebre
+    global df_sub,export_agr_subsist,export_agr_subsist_d,export_agr_subsist_q,export,export_agr_quiebre,export_agr_subsist_frnete
 
     import_file_path = filedialog.askopenfilename()
     list_sist = pd.read_excel(import_file_path,sheet_name='data')
     list_sist['SUBSISTEMA'] =list_sist['SUBSISTEMA'].str.strip()
-    list_sist['FIN'] = pd.to_datetime(list_sist.FIN).dt.date 
+    list_sist['FIN'] = pd.to_datetime(list_sist.FIN).dt.date
     list_sist['Actual'] = pd.to_datetime(list_sist.Actual).dt.date 
 
     export = pd.concat([pip_conc,mec_conc,elec_con_cab,elec_con_al,elec_con_mall,elec_con_epc,elec_con_equ,elec_con_inst,steel_conc,oocc_conc,arq_conc],axis=0)
-    export_agr_quiebre = export.groupby(['disc','OTEC','QUIEBRE_OT']).sum()
-    export_agr_quiebre['Percent'] = 1-export_agr_quiebre.HH_Saldo/export_agr_quiebre.HH_Tot
     
-    export_agr_subsist = export.groupby(['SUBSISTEMA']).sum()
-    export_agr_subsist_d = export.groupby(['SUBSISTEMA','disc']).sum()
-    export_agr_subsist_q = export.groupby(['SUBSISTEMA','disc','QUIEBRE_OT']).sum()
+
+    export_agr_quiebre = export.merge(list_sist, on='SUBSISTEMA', how='outer')
+
+    df_sub = export.merge(list_sist, on='SUBSISTEMA', how='outer')
+    del df_sub['Saldo_dias']  
+    
+    export_agr_quiebre = df_sub.groupby(['disc','OTEC','QUIEBRE_OT']).sum()
+    export_agr_subsist = df_sub.groupby(['ALCANCE','LINEA','SUBSISTEMA']).sum()
+    export_agr_subsist_d = df_sub.groupby(['ALCANCE','LINEA','SUBSISTEMA','disc']).sum()
+    export_agr_subsist_q = df_sub.groupby(['ALCANCE','LINEA','SUBSISTEMA','disc','QUIEBRE_OT']).sum()
+    export_agr_subsist_frnete = df_sub.groupby(['Frente','SUBSISTEMA']).sum()
+    export_agr_quiebre['Percent'] = 1-export_agr_quiebre.HH_Saldo/export_agr_quiebre.HH_Tot
     export_agr_subsist['Percent'] = 1-export_agr_subsist.HH_Saldo/export_agr_subsist.HH_Tot
     export_agr_subsist_d['Percent'] = 1-export_agr_subsist_d.HH_Saldo/export_agr_subsist_d.HH_Tot
     export_agr_subsist_q['Percent'] = 1-export_agr_subsist_q.HH_Saldo/export_agr_subsist_q.HH_Tot
+    export_agr_subsist_frnete['Percent'] = 1-export_agr_subsist_frnete.HH_Saldo/export_agr_subsist_frnete.HH_Tot
 
-    d_sub = export_agr_subsist_q.reset_index()
-    d_sub = d_sub.merge(list_sist, on='SUBSISTEMA', how='outer')
-    df_sub = d_sub.dropna(subset=['HH_Tot'])
+    df_sub = df_sub.groupby(['SUBSISTEMA','disc','QUIEBRE_OT']).sum()
+
+    df_sub=df_sub.reset_index()
+
+    df_sub = df_sub.merge(list_sist, on='SUBSISTEMA', how='outer')
+    df_sub = df_sub.dropna(subset=['HH_Tot'])
 
     print(df_sub)
     print(df_sub.columns)
+    print(export_agr_quiebre)
+    print(export_agr_subsist_q)
 
 
     Widget(my_frame3,"gray77", 15, 1, 150, 110).letra('Importado')
@@ -809,20 +822,21 @@ def sist_export_report_bi():
 
     n=0
 
+    # titulos_2 = ['QUIEBRE_OT', 'SUBSISTEMA', 'TAG', 'Cant_Tot', 'Cant_Avan', 'Cant_Sal',
+    #    'Und', 'HH_Tot', 'HH_Avan', 'HH_Saldo', 'OTEC', 'disc', 'CODE', 'AREA',
+    #    'DESCRIP', 'CONTRATO', 'TIPO', 'ALCANCE', 'LINEA', 'Actual', 'FIN',
+    #    'Saldo_dias', 'Frente']
 
-    titulos_1 =    ['SUBSISTEMA', 'disc', 'QUIEBRE_OT', 'Cant_Tot', 'Cant_Sal', 'HH_Tot',
-       'HH_Saldo', 'Percent', 'ITEM', 'CODE', 'AREA', 'DESCRIP', 'CONTRATO',
-       'TIPO', 'ALCANCE', 'DEF', 'LINEA', '1ER_COBRE', 'Actual', 'FIN',
-       'Saldo_dias']
+
+    titulos_1 =  ['SUBSISTEMA', 'disc', 'QUIEBRE_OT', 'Cant_Tot', 'Cant_Sal', 'HH_Tot',
+       'HH_Saldo', 'CODE', 'AREA', 'DESCRIP', 'CONTRATO', 'TIPO', 'ALCANCE',
+       'LINEA', 'Actual', 'FIN', 'Saldo_dias', 'Frente']
 
     df_temp = pd.DataFrame(columns=titulos_1)
  
     for i in df_sub.index:
         print(i)
-        print(df_sub.iloc[n,18])
-        print(df_sub.iloc[n,19] )
-
-        ft = [df_sub.iloc[n,18] + timedelta(days=d) for d in range((df_sub.iloc[n,19] - df_sub.iloc[n,18]).days + 1)]  # CREAMOS LA LISTA DE FECHAS
+        ft = [df_sub.iloc[n,14] + timedelta(days=d) for d in range((df_sub.iloc[n,15] - df_sub.iloc[n,14]).days + 1)]  # CREAMOS LA LISTA DE FECHAS
         dft = pd.DataFrame({'FECHA': ft})
 
         dft['HH_Dia'] = df_sub.iloc[n,6]/len(dft)
@@ -856,7 +870,6 @@ def sist_export_report_bi():
     df_temp = Semana(df_temp).split()  
 
     df_temp['disc'] = np.where(df_temp.disc.isnull(),"NA",df_temp['disc'])
-    df_temp['1ER_COBRE'] =  np.where(df_temp['1ER_COBRE'].isnull(),"NA",df_temp['1ER_COBRE'])    
     # df_temp = df_temp.dropna(subset=['Percent'])
 
     del df_temp['Fecha']
@@ -866,11 +879,12 @@ def sist_export_report_bi():
 
 
     
-    export.to_excel(writer, sheet_name='Det_Disc_sist', index=True)
+    export.to_excel(writer, sheet_name='Detalle', index=True)
     export_agr_quiebre.to_excel(writer, sheet_name='QUIEBRE', index=True)
     export_agr_subsist.to_excel(writer, sheet_name='SUBSISTEMA', index=True)
     export_agr_subsist_d.to_excel(writer, sheet_name='SUBSISTEMA_dis', index=True)
     export_agr_subsist_q.to_excel(writer, sheet_name='SUBSISTEMA_quie', index=True)
+    export_agr_subsist_frnete.to_excel(writer, sheet_name='Frente', index=True)
     df_temp.to_excel(writer, sheet_name='PowerBi', index=False)
     df_sub.to_excel(writer, sheet_name='data', index=False)
 
