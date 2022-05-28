@@ -432,6 +432,8 @@ def sist_import_piping():
     pip_sist_gen['Und'] = 'ml'
     pip_sist_gen['ISO'] = pip_sist_gen['TAG'].str[:13]
 
+    pip_sist_gen.groupby(['SUBSISTEMA','TAG']).sum().to_excel('pipingdesglose.xlsx')
+
     pip_sist_gen = pip_sist_gen[pip_sist_gen['QUIEBRE_OT'] != 0]
 
 
@@ -773,6 +775,7 @@ def sist_import_list():
 
     import_file_path = filedialog.askopenfilename()
     list_sist = pd.read_excel(import_file_path,sheet_name='data')
+    list_sist['SUBSISTEMA'] =list_sist['SUBSISTEMA'].str.strip()
     list_sist['FIN'] = pd.to_datetime(list_sist.FIN).dt.date 
     list_sist['Actual'] = pd.to_datetime(list_sist.Actual).dt.date 
 
@@ -787,11 +790,10 @@ def sist_import_list():
     export_agr_subsist_d['Percent'] = 1-export_agr_subsist_d.HH_Saldo/export_agr_subsist_d.HH_Tot
     export_agr_subsist_q['Percent'] = 1-export_agr_subsist_q.HH_Saldo/export_agr_subsist_q.HH_Tot
 
-    d_sub = export_agr_subsist_d.reset_index()
+    d_sub = export_agr_subsist_q.reset_index()
     d_sub = d_sub.merge(list_sist, on='SUBSISTEMA', how='outer')
     df_sub = d_sub.dropna(subset=['HH_Tot'])
 
-    df_sub.to_excel('Listado_final.xlsx')
     print(df_sub)
     print(df_sub.columns)
 
@@ -803,24 +805,30 @@ def sist_export_report_bi():
 
 
     df_sub['HH_Sem'] = df_sub.HH_Saldo/(df_sub['Saldo_dias'])*7
+    df_sub['Cant_Sem'] = df_sub.Cant_Sal/(df_sub['Saldo_dias'])*7
 
     n=0
 
-    titulos_1 =['SUBSISTEMA', 'disc', 'Cant_Tot', 'Cant_Sal', 'HH_Tot', 'HH_Saldo',
-       'Percent', 'ITEM', 'CODE', 'AREA', 'DESCRIP', 'CONTRATO', 'TIPO',
-       'ALCANCE', 'DEF', 'LINEA', '1ER_COBRE', 'Actual', 'FIN', 'Saldo_dias','HH_Sem','HH_Dia']
+
+    titulos_1 =    ['SUBSISTEMA', 'disc', 'QUIEBRE_OT', 'Cant_Tot', 'Cant_Sal', 'HH_Tot',
+       'HH_Saldo', 'Percent', 'ITEM', 'CODE', 'AREA', 'DESCRIP', 'CONTRATO',
+       'TIPO', 'ALCANCE', 'DEF', 'LINEA', '1ER_COBRE', 'Actual', 'FIN',
+       'Saldo_dias']
 
     df_temp = pd.DataFrame(columns=titulos_1)
  
     for i in df_sub.index:
-
         print(i)
+        print(df_sub.iloc[n,18])
+        print(df_sub.iloc[n,19] )
 
-        ft = [df_sub.iloc[n,17] + timedelta(days=d) for d in range((df_sub.iloc[n,18] - df_sub.iloc[n,17]).days + 1)]  # CREAMOS LA LISTA DE FECHAS
+        ft = [df_sub.iloc[n,18] + timedelta(days=d) for d in range((df_sub.iloc[n,19] - df_sub.iloc[n,18]).days + 1)]  # CREAMOS LA LISTA DE FECHAS
         dft = pd.DataFrame({'FECHA': ft})
 
-        dft['HH_Dia'] = df_sub.iloc[n,5]/len(dft)
-        dft['HH_Final'] = df_sub.iloc[n,4]/len(dft)
+        dft['HH_Dia'] = df_sub.iloc[n,6]/len(dft)
+        dft['Cant_Dia'] = df_sub.iloc[n,4]/len(dft)
+        dft['HH_Final'] = df_sub.iloc[n,5]/len(dft)
+        dft['Cant_Final'] = df_sub.iloc[n,3]/len(dft)
         dftv = df_sub.iloc[[i]]
         dftv['FECHA'] = ft[0]
         dftv.set_index('FECHA',inplace =True )
@@ -862,7 +870,7 @@ def sist_export_report_bi():
     export_agr_quiebre.to_excel(writer, sheet_name='QUIEBRE', index=True)
     export_agr_subsist.to_excel(writer, sheet_name='SUBSISTEMA', index=True)
     export_agr_subsist_d.to_excel(writer, sheet_name='SUBSISTEMA_dis', index=True)
-    export_agr_subsist_d.to_excel(writer, sheet_name='SUBSISTEMA_quie', index=True)
+    export_agr_subsist_q.to_excel(writer, sheet_name='SUBSISTEMA_quie', index=True)
     df_temp.to_excel(writer, sheet_name='PowerBi', index=False)
     df_sub.to_excel(writer, sheet_name='data', index=False)
 
