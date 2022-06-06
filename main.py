@@ -253,15 +253,15 @@ def PB_export():
     export_file = filedialog.askdirectory()  # Buscamos el directorio para guardar
     writer = pd.ExcelWriter(export_file + '/' + 'QB2_STEEL.xlsx')  # Creamos una excel y le indicamos la ruta
 
-    esp_comp = pd.concat([dg_otec,dfv_g],axis=1)
+    # esp_comp = pd.concat([dg_otec,dfv_g],axis=1)
 
 
 
     # Exportar Steel
     dfv.to_excel(writer, sheet_name='ST_Gan', index=True)
     df_base.to_excel(writer, sheet_name='ST_Base', index=True)
-    df_otec.to_excel(writer, sheet_name='ST_Otec', index=True)
-    esp_comp.to_excel(writer, sheet_name='Comparacion_ESP', index=True)
+    # df_otec.to_excel(writer, sheet_name='ST_Otec', index=True)
+    # esp_comp.to_excel(writer, sheet_name='Comparacion_ESP', index=True)
 
     Widget(my_frame1,"gray77", 1, 1, 168, 178).letra('OK')
 
@@ -394,20 +394,27 @@ def sist_import_piping():
     #LECTURA DE PLANTILLAS OTEC
 
     pip_sist_gen = pip_sist_1[['COD','SUB-SISTEMA','Codigo Fluido','UG/AG/OR','ISOMETRICO','Metros Aislados','Diametro','Metros cañerias fore cast 11',
-                        'AVANCE FINAL','HH TOTAL','HH\nAVANCE']]
+                        'AVANCE FINAL','HH TOTAL\nML','HH\nAVANCE']]
 
     pip_sist_men = pip_sist_2[['SUB \nSISTEMA','Codigo Fluido','ISOMETRICOS','Metros Aislados','Diametro','Metros cañerias',
                         'AVANCE TOTAL\nAG','HH TOTAL','HH\nAVANCE']]
     
-    pip_sist_valv = pip_sist_3[['SUB \nSISTEMA','Codigo Fluido','Isometrico','Diametro','Cantidad',
+    pip_sist_valv = pip_sist_3[['SUB-SISTEMA','Codigo Fluido','Isometrico','Diametro','Cantidad',
                          'AVANCE TOTAL\nAG','HH TOTAL','HH\nAVANCE']]
-    pip_sist_soport = pip_sist_4[['Isometrico','Diametro','Peso soporte total KG','KG']]
+    pip_sist_soport = pip_sist_4[['Isometrico','Diametro','Peso soporte total KG','HH\nAVANCE','HH TOTAL\nML','AVANCE KG\nAG']]
+
+    print(pip_sist_gen.columns)
+    print(pip_sist_gen.columns)
+    print(pip_sist_gen.columns)
+    print(pip_sist_gen.columns)
 
 
     #CUBICACION GENERAL
-    pip_sist_gen.rename(columns={'COD': 'QUIEBRE_OT','SUB-SISTEMA': 'SUBSISTEMA','HH TOTAL': 'HH_Tot','Metros cañerias fore cast 11': 'Cant_Tot','Diametro':'DIAMETRO','AVANCE FINAL':'Cant_Avan',
+    pip_sist_gen.rename(columns={'COD': 'QUIEBRE_OT','SUB-SISTEMA': 'SUBSISTEMA','HH TOTAL\nML': 'HH_Tot','Metros cañerias fore cast 11': 'Cant_Tot','Diametro':'DIAMETRO','AVANCE FINAL':'Cant_Avan',
                                 'HH\nAVANCE':'HH_Avan','ISOMETRICO':'TAG','UG/AG/OR':'Niv','Codigo Fluido':'Fluid'},
                        inplace=True)
+    
+    print(pip_sist_gen.columns)
 
     #INFO TEMPORAL PARA EXTRAR EL SUBSISTEMA
     iso_sub = pip_sist_gen[['TAG','SUBSISTEMA','Fluid']]
@@ -479,15 +486,15 @@ def sist_import_piping():
 
 
     #SOPORTERIA
-    pip_sist_soport.rename(columns={'Peso soporte total KG': 'Cant_Tot','Diametro':'DIAMETRO','KG':'Cant_Avan','Isometrico':'TAG'},inplace=True)
+    pip_sist_soport.rename(columns={'Peso soporte total KG': 'Cant_Tot','Diametro':'DIAMETRO','AVANCE KG\nAG':'Cant_Avan','Isometrico':'TAG','HH\nAVANCE':'HH_Avan','HH TOTAL\nML': 'HH_Tot'},inplace=True)
 
     pip_sist_soport['ISO'] = pip_sist_soport['TAG'].str[:13]
 
     pip_sist_soport = pip_sist_soport.groupby(['ISO']).sum()
 
     pip_sist_soport = pip_sist_soport.reset_index()
-    pip_sist_soport['HH_Tot'] = 0.42*pip_sist_soport.Cant_Tot
-    pip_sist_soport['HH_Avan'] = 0.42*pip_sist_soport.Cant_Avan
+    pip_sist_soport['HH_Saldo'] = pip_sist_soport['HH_Tot'].subtract(pip_sist_soport["HH_Avan"])
+
 
 
     pip_sist_soport = pip_sist_soport.merge(iso_sub[['ISO','SUBSISTEMA','Fluid']], on='ISO', how='left')
@@ -534,7 +541,7 @@ def sist_import_piping():
 
     print(pip_tot)
 
-    pip_tot['disc'] = 'Piping'
+    pip_tot['disc'] = 'PIP'
     pip_tot_res = pip_tot.groupby(['QUIEBRE_OT']).sum()
 
     pip_conc = pip_tot[['QUIEBRE_OT', 'SUBSISTEMA','TAG','Cant_Tot', 'Cant_Avan', 'Cant_Sal','Und', 'HH_Tot', 'HH_Avan', 'HH_Saldo',
@@ -556,10 +563,11 @@ def sist_import_mec():
     global mec_sist, mec_conc
     import_file_path = filedialog.askopenfilename()
     mec_sist = pd.read_excel(import_file_path,sheet_name='Base Datos',skiprows=6)
+    print(mec_sist.columns)
 
 
-    mec_sist = mec_sist[['TAG','SUBSIST','UND','HH UND','HH SALDO','Disciplina','Area']]
-    mec_sist.rename(columns={'SUBSIST': 'SUBSISTEMA','HH UND': 'HH_Tot','HH SALDO': 'HH_Saldo','UND':'Und'},
+    mec_sist = mec_sist[['TAG','SUBSIST','UND','HyH UND Rev. 12','HH SALDO Rev. 12','Disciplina','Area']]
+    mec_sist.rename(columns={'SUBSIST': 'SUBSISTEMA','HyH UND Rev. 12': 'HH_Tot','HH SALDO Rev. 12': 'HH_Saldo','UND':'Und'},
                        inplace=True)
 
     mec_sist = mec_sist[mec_sist['Area'] == 310]
@@ -651,7 +659,7 @@ def sist_import_elect():
     elect_sist_cab['Cant_Sal'] = elect_sist_cab['Cant_Tot'].subtract(elect_sist_cab["Cant_Avan"])
     elect_sist_cab['Und'] = 'ml'
     elect_sist_cab['OTEC'] = 'CABLES'
-    elect_sist_cab['disc'] = 'ELECT'
+    elect_sist_cab['disc'] = 'ELEC'
    
 
     elec_con_cab = elect_sist_cab[['QUIEBRE_OT','SUBSISTEMA','TAG','Cant_Tot','Cant_Avan','Cant_Sal','Und','HH_Tot','HH_Avan','HH_Saldo','OTEC','disc']]
@@ -675,7 +683,7 @@ def sist_import_elect():
     elect_sist_alu['HH_Saldo'] = elect_sist_alu['HH_Tot'].subtract(elect_sist_alu["HH_Avan"])
     elect_sist_alu['Cant_Sal'] = elect_sist_alu['Cant_Tot'].subtract(elect_sist_alu["Cant_Avan"])
     elect_sist_alu['OTEC'] = 'ALUMBRADO'
-    elect_sist_alu['disc'] = 'ELECT'
+    elect_sist_alu['disc'] = 'ELEC'
     elect_sist_alu['SUBSISTEMA'] = '0310-NZC-001'
 
     elec_con_al = elect_sist_alu[['QUIEBRE_OT','SUBSISTEMA','TAG','Cant_Tot','Cant_Avan','Cant_Sal','Und','HH_Tot','HH_Avan','HH_Saldo','OTEC','disc']]
@@ -719,7 +727,7 @@ def sist_import_elect():
     elect_sist_malla['HH_Saldo'] = elect_sist_malla['HH_Tot'].subtract(elect_sist_malla["HH_Avan"])
     elect_sist_malla['Cant_Sal'] = elect_sist_malla['Cant_Tot'].subtract(elect_sist_malla["Cant_Avan"])
     elect_sist_malla['OTEC'] = 'Malla a Tierra'
-    elect_sist_malla['disc'] = 'ELECT'
+    elect_sist_malla['disc'] = 'ELEC'
     elect_sist_malla['SUBSISTEMA'] = '0310-NZC-001'
 
     elec_con_mall = elect_sist_malla[['QUIEBRE_OT','TAG','SUBSISTEMA','Cant_Tot','Cant_Avan','Cant_Sal','Und','HH_Tot','HH_Avan','HH_Saldo','OTEC','disc']]
@@ -741,7 +749,7 @@ def sist_import_elect():
     elect_sist_epc['HH_Saldo'] = elect_sist_epc['HH_Tot'].subtract(elect_sist_epc["HH_Avan"])
     elect_sist_epc['Cant_Sal'] = elect_sist_epc['Cant_Tot'].subtract(elect_sist_epc["Cant_Avan"])
     elect_sist_epc['OTEC'] = 'EPC'
-    elect_sist_epc['disc'] = 'ELECT'
+    elect_sist_epc['disc'] = 'ELEC'
     elect_sist_epc['SUBSISTEMA'] = '0310-NZC-001'
 
     elec_con_epc = elect_sist_epc[['QUIEBRE_OT','SUBSISTEMA','TAG','Cant_Tot','Cant_Avan','Cant_Sal','Und','HH_Tot','HH_Avan','HH_Saldo','OTEC','disc']]
@@ -763,7 +771,7 @@ def sist_import_elect():
     elect_sist_equ['HH_Saldo'] = elect_sist_equ['HH_Tot'].subtract(elect_sist_equ["HH_Avan"])
     elect_sist_equ['Cant_Sal'] = elect_sist_equ['Cant_Tot'].subtract(elect_sist_equ["Cant_Avan"])
     elect_sist_equ['OTEC'] = 'Equipos electricos'
-    elect_sist_equ['disc'] = 'ELECT'
+    elect_sist_equ['disc'] = 'ELEC'
 
 
     elec_con_equ = elect_sist_equ[['QUIEBRE_OT','SUBSISTEMA','TAG','Cant_Tot','Cant_Avan','Cant_Sal','Und','HH_Tot','HH_Avan','HH_Saldo','OTEC','disc']]
@@ -787,7 +795,7 @@ def sist_import_elect():
     elect_sist_inst['HH_Saldo'] = elect_sist_inst['HH_Tot'].subtract(elect_sist_inst["HH_Avan"])
     elect_sist_inst['Cant_Sal'] = elect_sist_inst['Cant_Tot'].subtract(elect_sist_inst["Cant_Avan"])
     elect_sist_inst['OTEC'] = 'Instrumentos'
-    elect_sist_inst['disc'] = 'ELECT'
+    elect_sist_inst['disc'] = 'ELEC'
     elect_sist_inst['Und'] = 'UND'
 
     elec_con_inst = elect_sist_inst[['QUIEBRE_OT','SUBSISTEMA','TAG','Cant_Tot','Cant_Avan','Cant_Sal','Und','HH_Tot','HH_Avan','HH_Saldo','OTEC','disc']]
@@ -866,11 +874,30 @@ def sist_import_list():
     list_sist['FIN'] = pd.to_datetime(list_sist.FIN).dt.date
     list_sist['Actual'] = pd.to_datetime(list_sist.Actual).dt.date 
     list_sist['Ini_P'] = pd.to_datetime(list_sist.Ini_P).dt.date
-    list_sist['Fin_P'] = pd.to_datetime(list_sist.Fin_P).dt.date 
+    list_sist['Fin_P'] = pd.to_datetime(list_sist.Fin_P).dt.date
     
 
     export = pd.concat([pip_conc,mec_conc,elec_conc_total,steel_conc,oocc_conc,arq_conc],axis=0)
     
+
+    # def conditions(x):
+    #     if x == '0310-HCO-002':
+    #         return '0310-HC-002'
+    #     elif x > '0310-HC-015':
+    #         return "0310-HA-015"
+    #     elif x > '0310-HC-015':
+    #         return "0310-HA-015"
+    #     elif x > '0310-HC-015':
+    #         return "0310-HA-015"
+    #     else:
+    #         return x
+
+    # func = np.vectorize(conditions)
+    # energy_class = func(export["SUBSISTEMA"])
+
+    # export["SUBSISTEMA"] = energy_class
+
+     
     export_agr_quiebre = export.merge(list_sist, on='SUBSISTEMA', how='outer')
     export_agr_quiebre = export_agr_quiebre.dropna(subset=['QUIEBRE_OT'])
     print(export_agr_quiebre)
@@ -878,9 +905,10 @@ def sist_import_list():
     df_sub = export.merge(list_sist, on='SUBSISTEMA', how='outer')
     df_sub = df_sub[df_sub['Saldo_dias'] > 0 ]
     del df_sub['Saldo_dias']  
-    del df_sub['Saldo_dias_p'] 
+    del df_sub['Saldo_dias_p']
+    export_agr_quiebre = export_agr_quiebre[export_agr_quiebre['ALCANCE'] != 'NO']
+    df_sub = df_sub[df_sub['ALCANCE'] != 'NO']
 
-    
     
     export_agr_quiebre = df_sub.groupby(['disc','OTEC','QUIEBRE_OT']).sum()
     export_agr_subsist = df_sub.groupby(['ALCANCE','LINEA','SUBSISTEMA']).sum()
@@ -903,6 +931,7 @@ def sist_import_list():
 
     df_sub = df_sub.merge(list_sist, on='SUBSISTEMA', how='outer')
     df_sub = df_sub.dropna(subset=['HH_Tot'])
+    # df_sub = df_sub[df_sub['ALCANCE'] != 'NO']
 
     print(df_sub)
     print(df_sub.columns)
@@ -910,7 +939,7 @@ def sist_import_list():
     print(export_agr_subsist_q)
 
 
-    Widget(my_frame3,"gray77", 15, 1, 150, 110).letra('Importado')
+    Widget(my_frame3,"gray77", 15, 1, 150, 145).letra('Importado')
 
 #Exportar Data
 def sist_export_data():
@@ -928,8 +957,6 @@ def sist_export_data():
     Widget(my_frame3,"gray77", 1, 1, 150, 180).letra('OK')
 
     writer.save()
-
-
 
 
 #Power Bi
@@ -952,29 +979,29 @@ def sist_export_report_bi():
     #    'HH_Tot', 'HH_Avan', 'HH_Saldo', 'HH_Tot_C', 'HH_Sal_C', 'HH_Tot_P',
     #    'HH_Sal_P', 'CODE', 'AREA', 'DESCRIP', 'CONTRATO', 'TIPO', 'ALCANCE',
     #    'LINEA', 'Actual', 'FIN', 'Saldo_dias', 'Frente', 'Ini_P', 'Fin_P',
-    #    'Saldo_dias_p'],
+    #    'Saldo_dias_p']
 
     df_temp_c = pd.DataFrame(columns=titulos_1)
     df_temp_p = pd.DataFrame(columns=titulos_1)
  
     for i in df_sub.index:
         print(i)
-        ft = [df_sub.iloc[n,20] + timedelta(days=d) for d in range((df_sub.iloc[n,21] - df_sub.iloc[n,20]).days + 1)]  # CREAMOS LA LISTA DE FECHAS
-        dft = pd.DataFrame({'FECHA': ft})
+        ftc = [df_sub.iloc[n,20] + timedelta(days=d) for d in range((df_sub.iloc[n,21] - df_sub.iloc[n,20]).days + 1)]  # CREAMOS LA LISTA DE FECHAS
+        dftc = pd.DataFrame({'FECHA': ftc})
 
-        dft['HH_Dia'] = df_sub.iloc[n,10]/len(dft)
-        dft['Cant_Dia'] = df_sub.iloc[n,5]/len(dft)
-        dft['HH_Final'] = df_sub.iloc[n,9]/len(dft)
-        dft['Cant_Final'] = df_sub.iloc[n,3]/len(dft)
-        dftv = df_sub.iloc[[i]]
-        dftv['FECHA'] = ft[0]
-        dftv.set_index('FECHA',inplace =True )
-        print(dftv)
-        dft.set_index('FECHA',inplace =True)
-        res = pd.concat([dftv,dft],axis=1)
-        res = res.fillna(method='ffill')   
-        print(res)
-        df_temp_c = pd.concat([df_temp_c,res],axis=0)
+        dftc['HH_Dia'] = df_sub.iloc[n,10]/len(dftc)
+        dftc['Cant_Dia'] = df_sub.iloc[n,5]/len(dftc)
+        dftc['HH_Final'] = df_sub.iloc[n,9]/len(dftc)
+        dftc['Cant_Final'] = df_sub.iloc[n,3]/len(dftc)
+        dftvc = df_sub.iloc[[i]]
+        dftvc['FECHA'] = ftc[0]
+        dftvc.set_index('FECHA',inplace =True )
+        print(dftvc)
+        dftc.set_index('FECHA',inplace =True)
+        resc = pd.concat([dftvc,dftc],axis=1)
+        resc = resc.fillna(method='ffill')   
+        print(resc)
+        df_temp_c = pd.concat([df_temp_c,resc],axis=0)
         df_temp_c['etapa'] = 'Constr'
         print(df_temp_c)
         print(n)
@@ -982,25 +1009,25 @@ def sist_export_report_bi():
 
     for j in df_sub.index:
         print(j)
-        ft = [df_sub.iloc[m,24] + timedelta(days=d) for d in range((df_sub.iloc[m,25] - df_sub.iloc[m,24]).days + 1)]  # CREAMOS LA LISTA DE FECHAS
-        dft = pd.DataFrame({'FECHA': ft})
+        ftp = [df_sub.iloc[m,24] + timedelta(days=d) for d in range((df_sub.iloc[m,25] - df_sub.iloc[m,24]).days + 1)]  # CREAMOS LA LISTA DE FECHAS
+        dftp = pd.DataFrame({'FECHA': ftp})
 
-        dft['HH_Dia'] = df_sub.iloc[m,12]/len(dft)
-        dft['Cant_Dia'] = 0
-        dft['HH_Final'] = df_sub.iloc[m,11]/len(dft)
-        dft['Cant_Final'] = 0
-        dftv = df_sub.iloc[[i]]
-        dftv['FECHA'] = ft[0]
-        dftv.set_index('FECHA',inplace =True )
-        print(dftv)
-        dft.set_index('FECHA',inplace =True)
-        res = pd.concat([dftv,dft],axis=1)
-        res = res.fillna(method='ffill')   
-        print(res)
-        df_temp_p = pd.concat([df_temp_p,res],axis=0)
+        dftp['HH_Dia'] = df_sub.iloc[m,12]/len(dftp)
+        dftp['Cant_Dia'] = 0
+        dftp['HH_Final'] = df_sub.iloc[m,11]/len(dftp)
+        dftp['Cant_Final'] = 0
+        dftvp = df_sub.iloc[[j]]
+        dftvp['FECHA'] = ftp[0]
+        dftvp.set_index('FECHA',inplace =True)
+        print(dftvp)
+        dftp.set_index('FECHA',inplace =True)
+        resp = pd.concat([dftvp,dftp],axis=1)
+        resp = resp.fillna(method='ffill')   
+        print(resp)
+        df_temp_p = pd.concat([df_temp_p,resp],axis=0)
         df_temp_p['etapa'] = 'Punch'
         print(df_temp_p)
-        print(n)
+        print(m)
         m=m+1
 
 
@@ -1032,7 +1059,7 @@ def sist_export_report_bi():
     df_temp = Semana(df_temp).split()  
 
     df_temp['disc'] = np.where(df_temp.disc.isnull(),"NA",df_temp['disc'])
-    # df_temp = df_temp.dropna(subset=['Percent'])
+    df_temp = df_temp[df_temp['ALCANCE'] != 'NO']
 
     del df_temp['Fecha']
     # del df_temp[df_temp.columns[0]]
@@ -1043,7 +1070,7 @@ def sist_export_report_bi():
     df_temp.to_excel(writer, sheet_name='PowerBi', index=False)
     df_sub.to_excel(writer, sheet_name='data', index=False)
 
-    Widget(my_frame3,"gray77", 1, 1, 150, 145).letra('OK')
+    Widget(my_frame3,"gray77", 1, 1, 150, 215).letra('OK')
 
     writer.save()
 
