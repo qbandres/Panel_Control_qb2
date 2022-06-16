@@ -22,3 +22,19 @@ df_1.merge(df_2, on="id", how="left")
 print(df_1)
 
 
+def conditions(x):
+        if x == 'manzana'| x =='pera'| x=='platano':
+            return '0310-NZC-001_1'
+        elif x == 'naranja':
+            return 0.9
+        else:
+            return 10
+
+func = np.vectorize(conditions)
+energy_class = func(df_1["fruta"])
+    
+df_1["aprox"] = energy_class
+
+print(df_1)
+
+

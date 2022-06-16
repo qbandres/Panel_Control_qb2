@@ -4,7 +4,7 @@ from tkinter import filedialog
 import numpy as np
 import pandas as pd
 from tkinter.filedialog import asksaveasfile
-import datetime as dt 
+import datetime as dt
 from datetime import date, timedelta
 
 class Widget:
@@ -812,24 +812,35 @@ def sist_import_elect():
     elec_conc_total = elec_conc_total.fillna(0)
     elec_conc_total = elec_conc_total[elec_conc_total['HH_Tot'] != 0]
 
-   
-    print(elec_con_inst)
+       print(elec_con_inst)
+
 def sist_import_steel():
-    global steel_conc,oocc_conc,arq_conc
+    global steel_conc
 
     import_file_path = filedialog.askopenfilename()
-    steel_sist= pd.read_excel(import_file_path,sheet_name='Steel')
-    steel_sist['TAG'] = 'No aplica' 
-    oocc_sist= pd.read_excel(import_file_path,sheet_name='OOCC')
-    oocc_sist['TAG'] = 'No aplica' 
-    arq_sist= pd.read_excel(import_file_path,sheet_name='ARQ')
-    arq_sist['TAG'] = 'No aplica' 
+    steel_sist= pd.read_excel(import_file_path,sheet_name='Resumen L1 y L2',skiprows=1)
 
+    steel_sist=steel_sist.iloc[:, lambda elect_sist_cab: [4,5,6,7,11,12,13]]
+    steel_sist.columns = ['QUIEBRE_OT','Cant_Tot','Cant_Avan','Cant_Sal','HH_Tot','HH_Avan','HH_Saldo']
+    steel_sist = steel_sist.iloc[:28]
 
+    steel_sist['TAG'] = 'No aplica'
+
+    temp = pd.DataFrame({'QUIEBRE_OT':['03101.H032', '03101.H033', '03101.H030', '03101.H031', '03101.H108', '03101.H109', '03101.H110', '03101.H111', '03101.H112', '03101.H114', '03101.H113', '03101.H115', '03101.H116', '03101.H117', '03101.H118', '03101.H061', '03301.H062', '03201.H006', '03201.N008', '03301.H011', '09411.H003', '09101.H013', '03101.N159'],
+            'SUBSISTEMA':['0310-NZC-001_1', '0310-NZC-001_2', '0310-NZC-001_1', '0310-NZC-001_2', '0310-NZC-001_1', '0310-NZC-001_2', '0310-NZC-001_1', '0310-NZC-001_2', '0310-NZC-001_1', '0310-NZC-001_2', '0310-NZC-001_1', '0310-NZC-001_2', '0310-NZC-001_1', '0310-NZC-001_2', '0310-NZC-001_2', '0310-NZC-001_1', '0310-NZC-001_1', '0310-NZC-001_1', '0310-NZC-001_1', '0310-NZC-001_1', '0310-NZC-001_1', '0310-NZC-001_1', '0310-NZC-001_1']
+            })
+
+    steel_sist = steel_sist.merge(temp[['QUIEBRE_OT','SUBSISTEMA']], on='QUIEBRE_OT',
+                    how='left')  # Buscas HH de ID y lo insertas en data Horas ganadas
+    steel_sist['Und'] = 'Ton'
+    steel_sist['disc'] = 'EST'
+    steel_sist['OTEC'] = 'BASE'
+    steel_sist = steel_sist.dropna(subset=['SUBSISTEMA'])
 
     steel_conc = steel_sist[['QUIEBRE_OT', 'SUBSISTEMA','TAG','Cant_Tot', 'Cant_Avan', 'Cant_Sal','Und', 'HH_Tot', 'HH_Avan', 'HH_Saldo',
        'OTEC','disc']]
 
+    print(steel_conc)
     
 
     steel_conc['HH_Tot_C'] = steel_conc['HH_Tot']*0.9
@@ -837,8 +848,59 @@ def sist_import_steel():
     steel_conc['HH_Tot_P'] = steel_conc['HH_Tot']*0.1
     steel_conc['HH_Sal_P'] = np.where(steel_conc.HH_Avan <= steel_conc.HH_Tot_C,steel_conc.HH_Tot_P,steel_conc.HH_Tot - steel_conc.HH_Avan)
     print(steel_conc)
+    Widget(my_frame3,"gray77", 15, 1, 150, 110).letra('Importado')
 
+def sist_import_arq():
+
+    global arq_conc
+
+    import_file_path = filedialog.askopenfilename()
+    # oocc_sist= pd.read_excel(import_file_path,sheet_name='OOCC')
+    # oocc_sist['TAG'] = 'No aplica' 
+    arq_sist= pd.read_excel(import_file_path,sheet_name='Resumen L1 y L2',skiprows=2)
+    arq_sist=arq_sist.iloc[:, lambda elect_sist_cab: [2,3,4,5,9,10,11]]
+    arq_sist.columns = ['LINEA','Cant_Tot','Cant_Avan','Cant_Sal','HH_Tot','HH_Avan','HH_Saldo']
+    arq_sist['TAG'] = 'No aplica'
+    arq_sist['OTEC'] = 'base_arq'
+    arq_sist['QUIEBRE_OT'] =  'Instalación'
+    arq_sist['disc'] =  'ARQ'
+    arq_sist['Und'] =  'm2'
+
+    def conditions(x):
+        if x == 'L1':
+            return '0310-NZC-001_1'
+        elif x == 'L2':
+            return '0310-NZC-001_2'
+        else:
+            return '0310-NZC-001_1'
+
+    func = np.vectorize(conditions)
+    energy_class = func(arq_sist["LINEA"])
     
+    arq_sist["SUBSISTEMA"] = energy_class
+
+    del arq_sist['LINEA']
+
+    arq_conc = arq_sist[['QUIEBRE_OT', 'SUBSISTEMA','TAG','Cant_Tot', 'Cant_Avan', 'Cant_Sal','Und', 'HH_Tot', 'HH_Avan', 'HH_Saldo',
+       'OTEC','disc']]
+
+    arq_conc['HH_Tot_C'] = arq_conc.HH_Tot*0.9
+    arq_conc['HH_Sal_C'] = np.where(arq_conc.HH_Avan < arq_conc.HH_Tot_C,arq_conc.HH_Tot_C - arq_conc.HH_Avan,0)
+    arq_conc['HH_Tot_P'] = arq_conc.HH_Tot*0.1
+    arq_conc['HH_Sal_P'] = np.where(arq_conc.HH_Avan <= arq_conc.HH_Tot_C,arq_conc.HH_Tot_P,arq_conc.HH_Tot - arq_conc.HH_Avan)
+
+    print(arq_conc)
+
+    Widget(my_frame3,"gray77", 15, 1, 150, 145).letra('Importado')
+
+def sist_import_OC():
+    global oocc_conc
+
+    import_file_path = filedialog.askopenfilename()
+    oocc_sist= pd.read_excel(import_file_path,sheet_name='OOCC')
+    oocc_sist['TAG'] = 'No aplica' 
+
+        
     oocc_conc = oocc_sist[['QUIEBRE_OT', 'SUBSISTEMA','TAG','Cant_Tot', 'Cant_Avan', 'Cant_Sal','Und', 'HH_Tot', 'HH_Avan', 'HH_Saldo',
        'OTEC','disc']]
 
@@ -851,18 +913,8 @@ def sist_import_steel():
 
     print(oocc_conc)
 
-    arq_conc = arq_sist[['QUIEBRE_OT', 'SUBSISTEMA','TAG','Cant_Tot', 'Cant_Avan', 'Cant_Sal','Und', 'HH_Tot', 'HH_Avan', 'HH_Saldo',
-       'OTEC','disc']]
 
-    arq_conc['HH_Tot_C'] = arq_conc.HH_Tot*0.9
-    arq_conc['HH_Sal_C'] = np.where(arq_conc.HH_Avan < arq_conc.HH_Tot_C,arq_conc.HH_Tot_C - arq_conc.HH_Avan,0)
-    arq_conc['HH_Tot_P'] = arq_conc.HH_Tot*0.1
-    arq_conc['HH_Sal_P'] = np.where(arq_conc.HH_Avan <= arq_conc.HH_Tot_C,arq_conc.HH_Tot_P,arq_conc.HH_Tot - arq_conc.HH_Avan)
-
-    print(arq_conc)
-
-
-    Widget(my_frame3,"gray77", 15, 1, 150, 110).letra('Importado')
+    Widget(my_frame3,"gray77", 15, 1, 150, 180).letra('Importado')
 
 #Import Fechas
 def sist_import_list():
@@ -939,7 +991,7 @@ def sist_import_list():
     print(export_agr_subsist_q)
 
 
-    Widget(my_frame3,"gray77", 15, 1, 150, 145).letra('Importado')
+    Widget(my_frame3,"gray77", 15, 1, 150, 215).letra('Importado')
 
 #Exportar Data
 def sist_export_data():
@@ -954,10 +1006,9 @@ def sist_export_data():
     export_agr_subsist_q.to_excel(writer, sheet_name='SUBSISTEMA_quie', index=True)
     export_agr_subsist_frnete.to_excel(writer, sheet_name='Frente', index=True)
 
-    Widget(my_frame3,"gray77", 1, 1, 150, 180).letra('OK')
+    Widget(my_frame3,"gray77", 1, 1, 150, 250).letra('OK')
 
     writer.save()
-
 
 #Power Bi
 def sist_export_report_bi():
@@ -1070,10 +1121,9 @@ def sist_export_report_bi():
     df_temp.to_excel(writer, sheet_name='PowerBi', index=False)
     df_sub.to_excel(writer, sheet_name='data', index=False)
 
-    Widget(my_frame3,"gray77", 1, 1, 150, 215).letra('OK')
+    Widget(my_frame3,"gray77", 1, 1, 150, 285).letra('OK')
 
     writer.save()
-
 
 #Funcion asistencia
 def asistencia():
@@ -1152,7 +1202,7 @@ def export_asis():
     writer.save()
 root = Tk()
 root.title('Control Panel')
-root.geometry("380x270")
+root.geometry("380x420")
 
 my_notebook = ttk.Notebook(root)
 my_notebook.pack()
@@ -1190,11 +1240,15 @@ Widget(my_frame2,"gray56", 15, 1, 250, 165).boton('Exportar avance',pte_export_t
 Widget(my_frame3,"gray56", 15, 1, 250, 5).boton('Importar Piping',sist_import_piping)
 Widget(my_frame3,"gray56", 15, 1, 250, 40).boton('Importar Mec',sist_import_mec)
 Widget(my_frame3,"gray56", 15, 1, 250, 75).boton('Importar Elect',sist_import_elect)
-Widget(my_frame3,"gray56", 15, 1, 250, 110).boton('Import Steel&OOCC',sist_import_steel)
-Widget(my_frame3,"gray56", 15, 1, 250, 145).boton('Import Listado Sist',sist_import_list)
+Widget(my_frame3,"gray56", 15, 1, 250, 110).boton('Import Steel',sist_import_steel)
+Widget(my_frame3,"gray56", 15, 1, 250, 145).boton('Import ARQ',sist_import_arq)
+Widget(my_frame3,"gray56", 15, 1, 250, 180).boton('Import OOCC',sist_import_OC)
 
-Widget(my_frame3,"gray56", 15, 1, 250, 180).boton('Exportar Data',sist_export_data)
-Widget(my_frame3,"gray56", 15, 1, 250, 215).boton('Export Report bi',sist_export_report_bi)
+
+
+Widget(my_frame3,"gray56", 15, 1, 250, 215).boton('Import Listado Sist',sist_import_list)
+Widget(my_frame3,"gray56", 15, 1, 250, 250).boton('Exportar Data',sist_export_data)
+Widget(my_frame3,"gray56", 15, 1, 250, 285).boton('Export Report bi',sist_export_report_bi)
 
 
 #Frame4
