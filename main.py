@@ -436,7 +436,10 @@ def sist_import_piping():
     pip_sist_gen['Und'] = 'ml'
     pip_sist_gen['ISO'] = pip_sist_gen['TAG'].str[:13]
 
-    pip_sist_gen.groupby(['SUBSISTEMA','TAG']).sum().to_excel('pipingdesglose.xlsx')
+    pip_sist_print = pip_sist_gen
+    pip_sist_print['TAG'] = pip_sist_print['TAG'].astype(str).str[:-3]
+
+    pip_sist_print.groupby(['SUBSISTEMA','TAG','DIAMETRO']).sum().to_excel('pipingdesglose.xlsx')
 
     pip_sist_gen = pip_sist_gen[pip_sist_gen['QUIEBRE_OT'] != 0]
 
@@ -812,7 +815,7 @@ def sist_import_elect():
     elec_conc_total = elec_conc_total.fillna(0)
     elec_conc_total = elec_conc_total[elec_conc_total['HH_Tot'] != 0]
 
-       print(elec_con_inst)
+    print(elec_con_inst)
 
 def sist_import_steel():
     global steel_conc
