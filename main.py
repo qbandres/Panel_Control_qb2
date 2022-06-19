@@ -1,3 +1,4 @@
+from operator import index
 from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog
@@ -386,11 +387,6 @@ def sist_import_piping():
     pip_sist_3 = pd.read_excel(import_file_path,sheet_name='Cub Valvulas',skiprows=9)
     pip_sist_4 = pd.read_excel(import_file_path,sheet_name='Cub Soportes ',skiprows=4)
 
-    print(pip_sist_1.columns)
-    print(pip_sist_2.columns)
-    print(pip_sist_3.columns)
-    print(pip_sist_4.columns)
-
     #LECTURA DE PLANTILLAS OTEC
 
     pip_sist_gen = pip_sist_1[['COD','SUB-SISTEMA','Codigo Fluido','UG/AG/OR','ISOMETRICO','Metros Aislados','Diametro','Metros cañerias fore cast 11',
@@ -402,11 +398,6 @@ def sist_import_piping():
     pip_sist_valv = pip_sist_3[['SUB-SISTEMA','Codigo Fluido','Isometrico','Diametro','Cantidad',
                          'AVANCE TOTAL\nAG','HH TOTAL','HH\nAVANCE']]
     pip_sist_soport = pip_sist_4[['Isometrico','Diametro','Peso soporte total KG','HH\nAVANCE','HH TOTAL\nML','AVANCE KG\nAG']]
-
-    print(pip_sist_gen.columns)
-    print(pip_sist_gen.columns)
-    print(pip_sist_gen.columns)
-    print(pip_sist_gen.columns)
 
 
     #CUBICACION GENERAL
@@ -434,12 +425,7 @@ def sist_import_piping():
 
     pip_sist_gen['OTEC'] = 'General'
     pip_sist_gen['Und'] = 'ml'
-    pip_sist_gen['ISO'] = pip_sist_gen['TAG'].str[:13]
-
-    pip_sist_print = pip_sist_gen
-    pip_sist_print['TAG'] = pip_sist_print['TAG'].astype(str).str[:-3]
-
-    pip_sist_print.groupby(['SUBSISTEMA','TAG','DIAMETRO']).sum().to_excel('pipingdesglose.xlsx')
+    pip_sist_gen['ISO']  = np.where(pip_sist_gen['TAG'].str.len() == 22,pip_sist_gen['TAG'].astype(str).str[:-3],pip_sist_gen['TAG'])
 
     pip_sist_gen = pip_sist_gen[pip_sist_gen['QUIEBRE_OT'] != 0]
 
@@ -463,7 +449,8 @@ def sist_import_piping():
 
     pip_sist_men['OTEC'] = 'Linea_menor'
     pip_sist_men['Und'] = 'ml'
-    pip_sist_men['ISO'] = pip_sist_men['TAG'].str[:13]
+
+    pip_sist_men['ISO']  = pip_sist_men['TAG'].str[:-5]
 
     pip_sist_men = pip_sist_men[pip_sist_men['QUIEBRE_OT'] != 0]
 
@@ -560,6 +547,8 @@ def sist_import_piping():
     pip_conc = pip_conc.fillna(0)
     pip_conc = pip_conc[pip_conc['HH_Tot'] != 0]
 
+    pip_sist_print = pip_tot[(pip_tot['OTEC'] == 'General') | (pip_tot['OTEC'] == 'Linea_menor')]
+    pip_sist_print.groupby(['SUBSISTEMA','ISO','DIAMETRO']).sum().to_excel('pip_desglose.xlsx')
 
     Widget(my_frame3,"gray77", 15, 1, 150, 5).letra('Importado')
 def sist_import_mec():
@@ -647,7 +636,7 @@ def sist_import_elect():
 
     #CABLES
 
-    elect_sist_cab=elect_sist_cab.iloc[:, lambda elect_sist_cab: [2,3,7,14,32,37,43,54,56,57,59]]
+    elect_sist_cab=elect_sist_cab.iloc[:, lambda elect_sist_cab: [2,3,1,14,32,37,43,54,56,57,59]]
     elect_sist_cab.columns = ['SUBSISTEMA','Área','TAG','Cantidad','Tendido','Avance','Tipo cable','Linea','HH_TOTAL','HH_AVANCE','1ERCOBRE']
 
     elect_sist_cab.rename(columns={'Tipo cable': 'QUIEBRE_OT','HH_TOTAL': 'HH_Tot','Cantidad': 'Cant_Tot','Avance':'Cant_Avan',
@@ -657,6 +646,8 @@ def sist_import_elect():
     elect_sist_cab = elect_sist_cab.dropna(subset=['QUIEBRE_OT'])
     elect_sist_cab = elect_sist_cab.dropna(how='all')
 
+    elect_sist_cab = elect_sist_cab.fillna(0)
+
 
     elect_sist_cab['HH_Saldo'] = elect_sist_cab['HH_Tot'].subtract(elect_sist_cab["HH_Avan"])
     elect_sist_cab['Cant_Sal'] = elect_sist_cab['Cant_Tot'].subtract(elect_sist_cab["Cant_Avan"])
@@ -665,13 +656,16 @@ def sist_import_elect():
     elect_sist_cab['disc'] = 'ELEC'
    
 
+    elect_sist_cab['HH_Tot_C'] = elect_sist_cab.HH_Tot*0.7
+    elect_sist_cab['HH_Sal_C'] = np.where(elect_sist_cab.HH_Avan < elect_sist_cab.HH_Tot_C,elect_sist_cab.HH_Tot_C - elect_sist_cab.HH_Avan,0)
+    elect_sist_cab['HH_Tot_P'] = elect_sist_cab.HH_Tot*0.3
+    elect_sist_cab['HH_Sal_P'] = np.where(elect_sist_cab.HH_Avan <= elect_sist_cab.HH_Tot_C,elect_sist_cab.HH_Tot_P,elect_sist_cab.HH_Tot - elect_sist_cab.HH_Avan)
+    elect_sist_cab = elect_sist_cab[elect_sist_cab['SUBSISTEMA'] != 'Eliminado' ]
     elec_con_cab = elect_sist_cab[['QUIEBRE_OT','SUBSISTEMA','TAG','Cant_Tot','Cant_Avan','Cant_Sal','Und','HH_Tot','HH_Avan','HH_Saldo','OTEC','disc']]
-    elec_con_cab = elec_con_cab[elec_con_cab['SUBSISTEMA'] != 'Eliminado' ]
+    
+    ele_sist_print = elect_sist_cab
 
-    elec_con_cab['HH_Tot_C'] = elec_con_cab.HH_Tot*0.7
-    elec_con_cab['HH_Sal_C'] = np.where(elec_con_cab.HH_Avan < elec_con_cab.HH_Tot_C,elec_con_cab.HH_Tot_C - elec_con_cab.HH_Avan,0)
-    elec_con_cab['HH_Tot_P'] = elec_con_cab.HH_Tot*0.3
-    elec_con_cab['HH_Sal_P'] = np.where(elec_con_cab.HH_Avan <= elec_con_cab.HH_Tot_C,elec_con_cab.HH_Tot_P,elec_con_cab.HH_Tot - elec_con_cab.HH_Avan)
+    ele_sist_print.to_excel('elec_desglose.xlsx',index=True)
 
 
     #Alumbrado
@@ -816,7 +810,6 @@ def sist_import_elect():
     elec_conc_total = elec_conc_total[elec_conc_total['HH_Tot'] != 0]
 
     print(elec_con_inst)
-
 def sist_import_steel():
     global steel_conc
 
@@ -852,7 +845,6 @@ def sist_import_steel():
     steel_conc['HH_Sal_P'] = np.where(steel_conc.HH_Avan <= steel_conc.HH_Tot_C,steel_conc.HH_Tot_P,steel_conc.HH_Tot - steel_conc.HH_Avan)
     print(steel_conc)
     Widget(my_frame3,"gray77", 15, 1, 150, 110).letra('Importado')
-
 def sist_import_arq():
 
     global arq_conc
@@ -895,7 +887,6 @@ def sist_import_arq():
     print(arq_conc)
 
     Widget(my_frame3,"gray77", 15, 1, 150, 145).letra('Importado')
-
 def sist_import_OC():
     global oocc_conc
 
@@ -1246,7 +1237,6 @@ Widget(my_frame3,"gray56", 15, 1, 250, 75).boton('Importar Elect',sist_import_el
 Widget(my_frame3,"gray56", 15, 1, 250, 110).boton('Import Steel',sist_import_steel)
 Widget(my_frame3,"gray56", 15, 1, 250, 145).boton('Import ARQ',sist_import_arq)
 Widget(my_frame3,"gray56", 15, 1, 250, 180).boton('Import OOCC',sist_import_OC)
-
 
 
 Widget(my_frame3,"gray56", 15, 1, 250, 215).boton('Import Listado Sist',sist_import_list)
