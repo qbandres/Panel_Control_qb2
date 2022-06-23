@@ -636,8 +636,8 @@ def sist_import_elect():
 
     #CABLES
 
-    elect_sist_cab=elect_sist_cab.iloc[:, lambda elect_sist_cab: [2,3,1,14,32,37,43,54,56,57,59]]
-    elect_sist_cab.columns = ['SUBSISTEMA','Área','TAG','Cantidad','Tendido','Avance','Tipo cable','Linea','HH_TOTAL','HH_AVANCE','1ERCOBRE']
+    elect_sist_cab=elect_sist_cab.iloc[:, lambda elect_sist_cab: [2,3,1,14,37,43,54,56,57,59,31,32,33,34,35]]
+    elect_sist_cab.columns = ['SUBSISTEMA','Área','TAG','Cantidad','Avance','Tipo cable','Linea','HH_TOTAL','HH_AVANCE','1ERCOBRE','Trasl','Cableado','Conx_1','Conx_2','Test']
 
     elect_sist_cab.rename(columns={'Tipo cable': 'QUIEBRE_OT','HH_TOTAL': 'HH_Tot','Cantidad': 'Cant_Tot','Avance':'Cant_Avan',
                                 'HH_AVANCE':'HH_Avan'},
@@ -664,7 +664,6 @@ def sist_import_elect():
     elec_con_cab = elect_sist_cab[['QUIEBRE_OT','SUBSISTEMA','TAG','Cant_Tot','Cant_Avan','Cant_Sal','Und','HH_Tot','HH_Avan','HH_Saldo','OTEC','disc']]
     
     ele_sist_print = elect_sist_cab
-
     ele_sist_print.to_excel('elec_desglose.xlsx',index=True)
 
 
@@ -999,6 +998,7 @@ def sist_export_data():
     export_agr_subsist_d.to_excel(writer, sheet_name='SUBSISTEMA_dis', index=True)
     export_agr_subsist_q.to_excel(writer, sheet_name='SUBSISTEMA_quie', index=True)
     export_agr_subsist_frnete.to_excel(writer, sheet_name='Frente', index=True)
+    df_sub.to_excel(writer, sheet_name='data', index=True)
 
     Widget(my_frame3,"gray77", 1, 1, 150, 250).letra('OK')
 
@@ -1205,6 +1205,7 @@ my_frame1 = Frame(my_notebook,width=500,height=500,bg="gray77")
 my_frame2 = Frame(my_notebook,width=500,height=500,bg="gray77")
 my_frame3 = Frame(my_notebook,width=500,height=500,bg="gray")
 my_frame4 = Frame(my_notebook,width=500,height=500,bg="gray")
+my_frame5 = Frame(my_notebook,width=500,height=500,bg="gray")
 
 my_frame1.pack(fill = "both", expand=1)
 my_frame2.pack(fill="both", expand=1)
@@ -1215,6 +1216,7 @@ my_notebook.add(my_frame1,text="PB Steel")
 my_notebook.add(my_frame2,text="Avan Pte")
 my_notebook.add(my_frame3,text="System")
 my_notebook.add(my_frame4,text="Asitencia")
+my_notebook.add(my_frame5,text="Anterior")
 
 #Frame 1
 Widget(my_frame1,"gray56", 15, 2, 250, 5).boton('Importar Master',PB_import_master)
@@ -1241,7 +1243,7 @@ Widget(my_frame3,"gray56", 15, 1, 250, 180).boton('Import OOCC',sist_import_OC)
 
 Widget(my_frame3,"gray56", 15, 1, 250, 215).boton('Import Listado Sist',sist_import_list)
 Widget(my_frame3,"gray56", 15, 1, 250, 250).boton('Exportar Data',sist_export_data)
-Widget(my_frame3,"gray56", 15, 1, 250, 285).boton('Export Report bi',sist_export_report_bi)
+
 
 
 #Frame4
