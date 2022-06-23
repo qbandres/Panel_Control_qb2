@@ -661,7 +661,8 @@ def sist_import_elect():
     elect_sist_cab['HH_Tot_P'] = elect_sist_cab.HH_Tot*0.3
     elect_sist_cab['HH_Sal_P'] = np.where(elect_sist_cab.HH_Avan <= elect_sist_cab.HH_Tot_C,elect_sist_cab.HH_Tot_P,elect_sist_cab.HH_Tot - elect_sist_cab.HH_Avan)
     elect_sist_cab = elect_sist_cab[elect_sist_cab['SUBSISTEMA'] != 'Eliminado' ]
-    elec_con_cab = elect_sist_cab[['QUIEBRE_OT','SUBSISTEMA','TAG','Cant_Tot','Cant_Avan','Cant_Sal','Und','HH_Tot','HH_Avan','HH_Saldo','OTEC','disc']]
+    elec_con_cab = elect_sist_cab[['QUIEBRE_OT','SUBSISTEMA','TAG','Cant_Tot','Cant_Avan','Cant_Sal','Und','HH_Tot','HH_Avan','HH_Saldo','OTEC','disc','HH_Tot_C', 'HH_Sal_C', 'HH_Tot_P',
+       'HH_Sal_P']]
     
     ele_sist_print = elect_sist_cab
     ele_sist_print.to_excel('elec_desglose.xlsx',index=True)
@@ -923,6 +924,8 @@ def sist_import_list():
     
 
     export = pd.concat([pip_conc,mec_conc,elec_conc_total,steel_conc,oocc_conc,arq_conc],axis=0)
+
+    export.to_excel('geee.xlsx')
     
 
     # def conditions(x):
@@ -1243,6 +1246,7 @@ Widget(my_frame3,"gray56", 15, 1, 250, 180).boton('Import OOCC',sist_import_OC)
 
 Widget(my_frame3,"gray56", 15, 1, 250, 215).boton('Import Listado Sist',sist_import_list)
 Widget(my_frame3,"gray56", 15, 1, 250, 250).boton('Exportar Data',sist_export_data)
+Widget(my_frame3,"gray56", 15, 1, 250, 285).boton('Exportar PBI',sist_export_report_bi)
 
 
 
