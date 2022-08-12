@@ -57,28 +57,28 @@ def PB_import_master():
     ########CODIGO STEEL###############
 
     import_file_path = filedialog.askopenfilename()
-    df_master = pd.read_excel(import_file_path,sheet_name='Reporte',skiprows=7)
+    df_master = pd.read_excel(import_file_path,sheet_name='data')
     # df_otec = pd.read_excel(import_file_path,sheet_name='otec')
 
     # print(df_otec)
 
     d_pon = {'TR': 0.05, 'PA': 0.1, 'MO': 0.45, 'NI': 0.2, 'PI': 0.1, 'PU': 0.1}  # PONDERACIONES STEEL
-    df_master = df_master[['IDTekla', 'ESP', 'Barcode', 'PesoTotal(Kg)', 'Ratio', 'Traslado', 'Prearmado', 'Montaje',
-                           'Nivelacion,soldadura&Torque', 'Punchlist', 'FASE', 'Clasificación','linea','Descripción']]
+    df_master = df_master[['ID', 'ESP', 'BARCODE', 'WEIGHT', 'RATIO', 'TRASLADO', 'PRE-ENSAMBLE', 'MONTAJE',
+                           'TORQUE', 'PUNCH', 'ZONA', 'CLASS','LINEA','DESCRIPTION']]
 
-    df_master.rename(columns={'Traslado': 'DTR', 'Prearmado': 'DPA',
-                              'Montaje': 'DMO', 'Nivelacion,soldadura&Torque': 'DNI',
-                              'Punchlist': 'DPU', 'IDTekla': 'ID', 'PesoTotal(Kg)': 'WEIGHT'},
+    df_master.rename(columns={'TRASLADO': 'DTR', 'PRE-ENSAMBLE': 'DPA',
+                              'MONTAJE': 'DMO', 'TORQUE': 'DNI',
+                              'PUNCH': 'DPU', 'ID': 'ID', 'WEIGHT': 'WEIGHT'},
                      inplace=True)
 
 
-    df_master = df_master[df_master.Ratio.notnull()]  # LIMPIAMOS DATOS QUE ESTEN NULOS EN EL RATIO
+    df_master = df_master[df_master.RATIO.notnull()]  # LIMPIAMOS DATOS QUE ESTEN NULOS EN EL RATIO
     df_master = df_master[df_master.WEIGHT.notnull()]  # LIMPIAMOS LOS DATOS QUE ESTEN NULOS EN EL PESO
 
-    df_master = df_master[df_master["FASE"] != "PEBBLES"]
+    df_master = df_master[df_master["ZONA"] != "PEBBLES"]
     # df = df[df["FASE"] != "PIPE RACK 1@2"]
     # df = df[df["FASE"] != "SOPORTES COMITIVA PIPERACK 3 CON SALAS ELECTRICAS"]
-    df_master = df_master[df_master["FASE"] != "Torre de transferencia"]
+    df_master = df_master[df_master["ZONA"] != "Torre de transferencia"]
 
     df_master["DTR"] = pd.to_datetime(df_master.DTR).dt.date
     df_master["DPA"] = pd.to_datetime(df_master.DPA).dt.date
@@ -97,11 +97,11 @@ def PB_import_master():
 
     # # CALCULO DE HH EARNED TOTALES SEGUN MODERATION
 
-    df_master['TOTAL_ETR'] = df_master.WEIGHT * d_pon['TR'] * df_master.Ratio / 1000
-    df_master['TOTAL_EPA'] = df_master.WEIGHT * d_pon['PA'] * df_master.Ratio / 1000
-    df_master['TOTAL_EMO'] = df_master.WEIGHT * d_pon['MO'] * df_master.Ratio / 1000
-    df_master['TOTAL_ENI'] = df_master.WEIGHT * d_pon['NI'] * df_master.Ratio / 1000
-    df_master['TOTAL_EPU'] = df_master.WEIGHT * d_pon['PU'] * df_master.Ratio / 1000
+    df_master['TOTAL_ETR'] = df_master.WEIGHT * d_pon['TR'] * df_master.RATIO / 1000
+    df_master['TOTAL_EPA'] = df_master.WEIGHT * d_pon['PA'] * df_master.RATIO / 1000
+    df_master['TOTAL_EMO'] = df_master.WEIGHT * d_pon['MO'] * df_master.RATIO / 1000
+    df_master['TOTAL_ENI'] = df_master.WEIGHT * d_pon['NI'] * df_master.RATIO / 1000
+    df_master['TOTAL_EPU'] = df_master.WEIGHT * d_pon['PU'] * df_master.RATIO / 1000
 
     
     # CALCULO DE PESO SEGUN AVANCE
@@ -118,7 +118,7 @@ def PB_import_master():
     df_master['BWNI'] = np.where(df_master['DNI'].isnull(), 0, df_master.WEIGHT)
     df_master['BWPU'] = np.where(df_master['DPU'].isnull(), 0, df_master.WEIGHT)
 
-    df_base = df_master[['ID', 'ESP', 'WEIGHT', 'Ratio', 'FASE', 'Clasificación','linea','Descripción', 'BWTR', 'BWPA', 'BWMO', 'BWNI', 'BWPU']]
+    df_base = df_master[['ID', 'ESP', 'WEIGHT', 'RATIO', 'ZONA', 'CLASS','LINEA','DESCRIPTION', 'BWTR', 'BWPA', 'BWMO', 'BWNI', 'BWPU']]
 
     df_base = df_base.fillna(0)
 
@@ -135,11 +135,11 @@ def PB_import_master():
 
 
     # CALCULO DE HH EARNED SEGUN AVANCE
-    df_master['ETR'] = np.where(df_master['DTR'].isnull(), 0, df_master.WEIGHT * d_pon['TR'] * df_master.Ratio / 1000)
-    df_master['EPA'] = np.where(df_master['DPA'].isnull(), 0, df_master.WEIGHT * d_pon['PA'] * df_master.Ratio / 1000)
-    df_master['EMO'] = np.where(df_master['DMO'].isnull(), 0, df_master.WEIGHT * d_pon['MO'] * df_master.Ratio / 1000)
-    df_master['ENI'] = np.where(df_master['DNI'].isnull(), 0, df_master.WEIGHT * d_pon['NI'] * df_master.Ratio / 1000)
-    df_master['EPU'] = np.where(df_master['DPU'].isnull(), 0, df_master.WEIGHT * d_pon['PU'] * df_master.Ratio / 1000)
+    df_master['ETR'] = np.where(df_master['DTR'].isnull(), 0, df_master.WEIGHT * d_pon['TR'] * df_master.RATIO / 1000)
+    df_master['EPA'] = np.where(df_master['DPA'].isnull(), 0, df_master.WEIGHT * d_pon['PA'] * df_master.RATIO / 1000)
+    df_master['EMO'] = np.where(df_master['DMO'].isnull(), 0, df_master.WEIGHT * d_pon['MO'] * df_master.RATIO / 1000)
+    df_master['ENI'] = np.where(df_master['DNI'].isnull(), 0, df_master.WEIGHT * d_pon['NI'] * df_master.RATIO / 1000)
+    df_master['EPU'] = np.where(df_master['DPU'].isnull(), 0, df_master.WEIGHT * d_pon['PU'] * df_master.RATIO / 1000)
 
     df_master['WBRUTO'] = np.where(df_master['DMO'].isnull(), 0, df_master.WEIGHT)
     df_master['WPOND'] = df_master.WTR + df_master.WPA + df_master.WMO + df_master.WNI + df_master.WPU
@@ -149,27 +149,27 @@ def PB_import_master():
 
     #########################SEPARAMOS LOS PESOS POR AVANCE DE CADA ETAPA
 
-    df_dtr = df_master[["ESP", "ID", 'Barcode', "WEIGHT", "Ratio", "DTR", "WTR", "ETR", 'FASE', 'Clasificación','linea','Descripción']]
+    df_dtr = df_master[["ESP", "ID", 'BARCODE', "WEIGHT", "RATIO", "DTR", "WTR", "ETR", 'ZONA', 'CLASS','LINEA','DESCRIPTION']]
     df_dtr = df_dtr.dropna(subset=['DTR'])  # Elimina llas filas vacias de DTR
     df_dtr["Etapa"] = "1-Traslado"
     df_dtr = df_dtr.rename(columns={'WTR': 'WPOND', "DTR": 'Fecha', 'ETR': 'HGan'})
 
-    df_dpa = df_master[["ESP", "ID", 'Barcode', "WEIGHT", "Ratio", "DPA", "WPA", "EPA", 'FASE', 'Clasificación','linea','Descripción']]
+    df_dpa = df_master[["ESP", "ID", 'BARCODE', "WEIGHT", "RATIO", "DPA", "WPA", "EPA", 'ZONA', 'CLASS','LINEA','DESCRIPTION']]
     df_dpa = df_dpa.dropna(subset=['DPA'])
     df_dpa["Etapa"] = "2-Ensamble"
     df_dpa = df_dpa.rename(columns={'WPA': 'WPOND', "DPA": 'Fecha', 'EPA': 'HGan'})
 
-    df_dmo = df_master[["ESP", "ID", 'Barcode', "WEIGHT", "Ratio", "DMO", "WMO", "EMO", 'FASE', 'Clasificación','linea','Descripción']]
+    df_dmo = df_master[["ESP", "ID", 'BARCODE', "WEIGHT", "RATIO", "DMO", "WMO", "EMO", 'ZONA', 'CLASS','LINEA','DESCRIPTION']]
     df_dmo = df_dmo.dropna(subset=['DMO'])
     df_dmo["Etapa"] = "3-Montaje"
     df_dmo = df_dmo.rename(columns={'WMO': 'WPOND', "DMO": 'Fecha', 'EMO': 'HGan'})
 
-    df_dni = df_master[["ESP", "ID", 'Barcode', "WEIGHT", "Ratio", "DNI", "WNI", "ENI", 'FASE', 'Clasificación','linea','Descripción']]
+    df_dni = df_master[["ESP", "ID", 'BARCODE', "WEIGHT", "RATIO", "DNI", "WNI", "ENI", 'ZONA', 'CLASS','LINEA','DESCRIPTION']]
     df_dni = df_dni.dropna(subset=['DNI'])
     df_dni["Etapa"] = "4-Alineamiento"
     df_dni = df_dni.rename(columns={'WNI': 'WPOND', "DNI": 'Fecha', 'ENI': 'HGan'})
 
-    df_dpu = df_master[["ESP", "ID", 'Barcode', "WEIGHT", "Ratio", "DPU", "WPU", "EPU", 'FASE', 'Clasificación','linea','Descripción']]
+    df_dpu = df_master[["ESP", "ID", 'BARCODE', "WEIGHT", "RATIO", "DPU", "WPU", "EPU", 'ZONA', 'CLASS','LINEA','DESCRIPTION']]
     df_dpu = df_dpu.dropna(subset=['DPU'])
     df_dpu["Etapa"] = "6-Punch_List"
     df_dpu = df_dpu.rename(columns={'WPU': 'WPOND', "DPU": 'Fecha', 'EPU': 'HGan'})
@@ -179,25 +179,19 @@ def PB_import_master():
     dfv = pd.concat(
         [df_dtr.round(1), df_dpa.round(1), df_dmo.round(1), df_dni.round(1), df_dpu.round(1)], axis=0)
 
-    dfv.to_excel('mmm.xlsx')
-
-
     dfv['WBRUTO'] = np.where(dfv.Etapa != '3-Montaje', 0, dfv.WEIGHT)
 
     np_array = dfv.to_numpy()
 
     dfv = pd.DataFrame(data=np_array,
-                       columns=['ESP', 'ID', 'Barcode', 'WEIGHT', 'Ratio', 'FECHA', 'WPOND', 'HHGan', 'FASE',
-                                'Clasificación','linea','Descripción', 'Etapa',
+                       columns=['ESP', 'ID', 'BARCODE', 'WEIGHT', 'RATIO', 'FECHA', 'WPOND', 'HHGan', 'ZONA',
+                                'CLASS','LINEA','DESCRIPTION', 'Etapa',
                                 'WBRUTO'])
 
     dfv["FECHA"] = pd.to_datetime(dfv.FECHA).dt.date
 
     dfv = Semana(dfv).split()  # Insertamos la Semana con class
     
-    print(dfv)
-    dfv.to_excel('mmm.xlsx')
-
     dfv = dfv.fillna(0)
 
     print(df_master)
@@ -272,10 +266,10 @@ def pte_import_master():
     #LECTURA DE LA INFORMACION
 
     import_file_path = filedialog.askopenfilename()
-    mast = pd.read_excel(import_file_path,sheet_name='Reporte',skiprows=7)
+    mast = pd.read_excel(import_file_path,sheet_name='data')
 
     #RENOMBRANDO LAS COLUMNAS
-    mast.rename(columns={"PesoUnit,(Kg)":"Weight","Traslado":"DTR","Prearmado":"DEN","Montaje":"DMO","Nivelacion,soldadura&Torque":"DTO","Punchlist":"DPU","IDTekla":"ID"},inplace=True)
+    mast.rename(columns={"WEIGHT":"Weight","TRASLADO":"DTR","PRE-ENSAMBLE":"DEN","MONTAJE":"DMO","TORQUE":"DTO","PUNCH":"DPU","ID":"ID"},inplace=True)
 
     #RETIRARNO LAS FASES QUE NO INTERVIENEN
     mast = mast[mast["FASE"] != "PEBBLES"]
@@ -284,7 +278,7 @@ def pte_import_master():
     mast = mast[mast["FASE"] != "Torre de transferencia"]
 
     #FILTRANDO LAS COLUMNAS QUE SE VAN A USAR
-    mast = mast[['ESP','Clasificación','Stockcode','Descripción','Barcode','ID','Weight','DTR','DEN','DMO','DTO','DPU']]      
+    mast = mast[['ESP','CLASS','ZONA','DESCRIPTION','BARCODE','ID','Weight','DTR','DEN','DMO','DTO','DPU']]      
 
     Widget(my_frame2,"gray77", 1, 1, 150, 5).letra('Importado')
 def pte_import_pte():
@@ -630,7 +624,7 @@ def sist_import_elect():
 
     #CABLES
 
-    elect_sist_cab=elect_sist_cab.iloc[:, lambda elect_sist_cab: [5,6,1,17,40,46,57,59,60,62,34,35,36,37,38]]
+    elect_sist_cab=elect_sist_cab.iloc[:, lambda elect_sist_cab: [2,3,1,14,37,43,54,56,57,59,31,32,33,34,35]]
     elect_sist_cab.columns = ['SUBSISTEMA','Área','TAG','Cantidad','Avance','Tipo cable','Linea','HH_TOTAL','HH_AVANCE','1ERCOBRE','Trasl','Cableado','Conx_1','Conx_2','Test']
 
     elect_sist_cab.rename(columns={'Tipo cable': 'QUIEBRE_OT','HH_TOTAL': 'HH_Tot','Cantidad': 'Cant_Tot','Avance':'Cant_Avan',
@@ -940,12 +934,14 @@ def sist_import_arq():
     arq_sist['disc'] =  'ARQ'
     arq_sist['Und'] =  'm2'
 
+    print(arq_sist)
+
     # print(arq_sist[['HH_Tot','HH_Avan','HH_Saldo']])
 
     def conditions(x):
-        if x == 'L1':
+        if x == 'L1.':
             return '0310-NZC-001_1'
-        elif x == 'L2':
+        elif x == 'L2.':
             return '0310-NZC-001_2'
         else:
             return '0310-NZC-001_1'
